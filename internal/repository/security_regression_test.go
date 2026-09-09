@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestRejectHardLinkedDescriptorsAndEvidence(t *testing.T) {
@@ -37,6 +38,11 @@ func TestRejectHardLinkedDescriptorsAndEvidence(t *testing.T) {
 
 func TestDiscoveryDetectsConcurrentDirectoryChange(t *testing.T) {
 	root := mkdirTemp(t, "discovery-race-")
+	// Ensure the mutation advances mtime even on coarse-grained filesystems.
+	past := time.Unix(1, 0)
+	if err := os.Chtimes(root, past, past); err != nil {
+		t.Fatal(err)
+	}
 	fs, err := Open(root)
 	if err != nil {
 		t.Fatal(err)
