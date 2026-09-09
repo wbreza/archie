@@ -55,7 +55,7 @@ func build(version, parent string) error {
 		return fmt.Errorf("output parent must already exist")
 	}
 	var docs []entry
-	for _, name := range []string{"README.md", "docs/contract-v1.md", "docs/build-and-measure.md", "schemas/record.schema.json", "schemas/root.schema.json", "schemas/response.schema.json"} {
+	for _, name := range []string{"README.md", "docs/contract-v1.md", "docs/build-and-measure.md", "docs/versioning.md", "schemas/record.schema.json", "schemas/root.schema.json", "schemas/response.schema.json"} {
 		b, err := os.ReadFile(filepath.FromSlash(name))
 		if err != nil {
 			return fmt.Errorf("run from the Archie repository root: %w", err)

@@ -14,9 +14,6 @@ import (
 
 type Response = contract.Response[any]
 
-// BuildVersion may be set at build time using go build -ldflags -X.
-var BuildVersion = "0.1.0-dev"
-
 func empty(command contract.Command) Response {
 	return Response{APIVersion: contract.Version, Command: command, Status: contract.OK,
 		Diagnostics: []contract.Diagnostic{}, Coverage: contract.Coverage{Omissions: []contract.Omission{}},
@@ -56,7 +53,7 @@ func data(r *Response, value any) { r.Data = &value }
 func Run(o Options) ([]byte, int) {
 	if o.Command == contract.VersionCommand {
 		r := empty(o.Command)
-		data(&r, contract.VersionData{Version: BuildVersion})
+		data(&r, contract.VersionData{Version: version()})
 		return encode(r), 0
 	}
 	if o.Command == contract.Scaffold {

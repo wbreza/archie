@@ -10,10 +10,15 @@ descriptor scaffolding. Read commands are cache-free and do not mutate files.
 - [Root discovery extension](schemas/root.schema.json)
 - [Response schema](schemas/response.schema.json)
 - [Local packaging and representative measurement](docs/build-and-measure.md)
+- [Go version policy, private installs and manual releases](docs/versioning.md)
+
+The first Go release is **`v0.1.0` (pending publication)**, separate from the
+API/schema generation `"1"`. After publication, install the pinned package
+`github.com/wbreza/archie/cmd/archie@v0.1.0` using the private-access setup above.
 
 Requires Go 1.25 or later (rooted filesystem containment). Build and run:
 
-```sh
+```powershell
 go build -o archie.exe ./cmd/archie
 .\archie.exe version
 .\archie.exe context --root C:\path\to\application --query "report delivery"
