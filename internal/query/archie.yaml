@@ -1,0 +1,51 @@
+schema_version: "1"
+id: query
+name: Bounded context and evidence pipeline
+summary: Selects architectural context, known impact and local evidence into bounded JSON responses.
+kind: subsystem
+tags: [query, context, evidence, baseline, impact, budgets]
+description: |
+  Each read invocation loads the repository graph anew, plans deterministic
+  candidates and packs whole record views with provenance, links, diagnostics
+  and coverage. Context ranks additive ID, path and weighted token seeds, adds
+  root-first ancestors and one outgoing relation hop. Ancestor-only records
+  are summary projections. Get stays shallow; impact follows directly matched
+  descriptor/file paths and one incoming relation hop, not arbitrary code usage.
+
+  Record, link, output and evidence budgets bound the response and selected
+  work. Opaque continuation binds query options to the metadata snapshot;
+  source evidence is checked again on later pages. Omitted or unvisited evidence
+  is not silently treated as checked, and partial results expose their gaps.
+  All selection and evidence state is in memory for this invocation.
+
+  Evidence comparison uses safe current files and an explicitly supplied full
+  Git commit ID. Git is an offline, bounded object reader with no fetching,
+  filters or repository mutation. Without a baseline, existing evidence is
+  unknown; budget-unvisited targets are unchecked. Changed and unchanged report
+  byte comparison, not semantic freshness. Missing evidence makes queries
+  partial and evidence validation fail; changed bytes alone are informational.
+links:
+  - relation: depends_on
+    target: repository
+    description: Supplies the fresh graph, canonical paths and contained evidence reads.
+  - relation: depends_on
+    target: contract
+    description: Defines response views, coverage, evidence states, cursors and resource limits.
+  - relation: source
+    target: run.go
+    description: Read orchestration, bounded response packing, validation and continuation handling.
+  - relation: source
+    target: select.go
+    description: Deterministic context seeds, ancestor projections, unified links and known-impact expansion.
+  - relation: source
+    target: evidence.go
+    description: Explicit baseline resolution and bounded comparisons against current working-tree bytes.
+  - relation: source
+    target: options.go
+    description: Effective defaults, selector tokenization and canonical query identity.
+  - relation: test
+    target: query_test.go
+    description: Selection, pagination, ancestor, evidence and missing-target contract checks.
+  - relation: test
+    target: review_regression_test.go
+    description: Bounded evidence validation, pageable records and unavailable/subdirectory baseline regressions.

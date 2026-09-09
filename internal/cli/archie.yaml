@@ -1,0 +1,40 @@
+schema_version: "1"
+id: cli
+name: CLI entry and adapter
+summary: Translates process arguments into bounded query requests and writes the public response.
+kind: adapter
+tags: [cli, arguments, entry, stdout]
+description: |
+  The executable supplies process arguments and stdout to this adapter, then
+  exits with its result. The adapter interprets the shared command specification,
+  rejects incompatible or repeated singleton flags, validates selectors and
+  budgets, and constructs query options. It does not own repository discovery
+  or record selection.
+
+  Query execution returns encoded response bytes and an exit code. Parsing
+  failures also use the query layer's error envelope; help is plain text.
+  The adapter writes the result and treats failed or short output writes as
+  operational failures. Version and explicit scaffold are dispatched through
+  the same query entry point, while scaffold file creation belongs to repository.
+links:
+  - relation: depends_on
+    target: query
+    description: Executes requests and encodes normal and failure responses.
+  - relation: depends_on
+    target: contract
+    description: Supplies allowed command flags, hard budgets and exit constants.
+  - relation: depends_on
+    target: repository
+    description: Supplies the shared problem type used for parser failures.
+  - relation: source
+    target: ../../cmd/archie/main.go
+    description: Thin process boundary supplying arguments, stdout and the final exit status.
+  - relation: source
+    target: cli.go
+    description: Argument parsing, help handling, query dispatch and checked output writes.
+  - relation: test
+    target: cli_test.go
+    description: Process-level command, envelope, error, flag and budget checks.
+  - relation: test
+    target: scaffold_test.go
+    description: Real-process scaffold creation, refusal, readback and read-command non-mutation checks.

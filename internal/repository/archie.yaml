@@ -1,0 +1,53 @@
+schema_version: "1"
+id: repository
+name: Repository loader and safe graph
+summary: Loads strict descriptors into an in-memory architecture graph within an explicit filesystem root.
+kind: subsystem
+tags: [repository, validation, discovery, graph, paths, safety]
+description: |
+  Repository loading starts at a required root archie.yaml and discovers
+  directory and named descriptors in lexical order. Strict YAML node checks
+  precede validation against the embedded schema. The loader enforces unique
+  IDs, resolves descriptor-relative file links and ID relations, and derives
+  parent/child navigation from descriptor placement rather than authored edges.
+  The resulting graph and metadata snapshot belong to one invocation.
+
+  Root exclusions, fixed generated-directory exclusions and nested repository
+  boundaries constrain discovery; Git ignore rules do not. Uncertain identity,
+  incomplete discovery and unsafe paths fail closed. Identifiable non-root
+  schema or unresolved-link failures can remain explicit gaps for scoped reads;
+  global validation rejects them.
+
+  Filesystem operations use Go's rooted access with exact-case inspection,
+  containment checks, rejection of symlinks/reparse points and multiply linked
+  regular files, bounded reads and identity rechecks. These checks detect races
+  but are not an atomic filesystem snapshot. Explicit scaffold reuses validation
+  and containment before exclusive creation in an existing parent directory.
+links:
+  - relation: depends_on
+    target: schemas
+    description: Compiles the bundled authoritative root and record schemas for parsing.
+  - relation: depends_on
+    target: contract
+    description: Supplies record types, link relations and discovery/parser limits.
+  - relation: source
+    target: graph.go
+    description: Discovery boundaries, identity resolution, derived hierarchy and metadata snapshot.
+  - relation: source
+    target: parse.go
+    description: Strict single-document YAML checks followed by authoritative schema validation.
+  - relation: source
+    target: paths.go
+    description: Portable path normalization, rooted containment, exact spelling and bounded stable reads.
+  - relation: source
+    target: reparse_windows.go
+    description: Windows reparse-point detection and handle-based hard-link counting.
+  - relation: source
+    target: scaffold.go
+    description: Validates proposed metadata and exclusively creates one descriptor without directory creation.
+  - relation: test
+    target: repository_test.go
+    description: Parser and repository fixtures plus identity, link and discovery failure scenarios.
+  - relation: test
+    target: security_regression_test.go
+    description: Hard-linked descriptor/evidence rejection and concurrent discovery change checks.
