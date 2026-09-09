@@ -21,8 +21,6 @@ jobs:
     defaults:
       run:
         shell: bash
-    env:
-      ARCHIE_TEST_SCRATCH: ${{ runner.temp }}/archie-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Check out source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -36,7 +34,10 @@ jobs:
           cache: false
 
       - name: Prepare isolated test scratch
-        run: mkdir -p "$ARCHIE_TEST_SCRATCH"
+        run: |
+          scratch="$RUNNER_TEMP/archie-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir -p "$scratch"
+          printf 'ARCHIE_TEST_SCRATCH=%s\n' "$scratch" >> "$GITHUB_ENV"
 
       - name: Check formatting
         run: |
