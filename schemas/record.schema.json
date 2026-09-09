@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://archie.dev/schemas/v1/record.schema.json",
+  "title": "Archie v1 authored record",
+  "$ref": "#/$defs/content",
+  "unevaluatedProperties": false,
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$"
+    },
+    "text": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "link": {
+      "type": "object",
+      "required": ["relation", "target", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "relation": { "enum": ["depends_on", "related_to", "source", "test", "doc", "adr"] },
+        "target": { "$ref": "#/$defs/text" },
+        "description": { "$ref": "#/$defs/text", "maxLength": 1024 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "relation": { "enum": ["depends_on", "related_to"] } } },
+          "then": { "properties": { "target": { "$ref": "#/$defs/id" } } },
+          "else": { "properties": { "target": { "$ref": "#/$defs/fileTarget" } } }
+        }
+      ]
+    },
+    "fileTarget": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^[^/\\\\:*?\\[\\]#<>\"|\\x00-\\x1f\\x7f]+(?:/[^/\\\\:*?\\[\\]#<>\"|\\x00-\\x1f\\x7f]+)*$"
+    },
+    "canonicalPath": {
+      "allOf": [
+        { "$ref": "#/$defs/fileTarget" },
+        { "not": { "pattern": "(^|/)\\.\\.?(/|$)" } },
+        { "not": { "pattern": "(^|/)[^/]*[ .](/|$)" } }
+      ]
+    },
+    "content": {
+      "type": "object",
+      "required": ["schema_version", "id", "name", "summary"],
+      "properties": {
+        "schema_version": { "const": "1" },
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/text", "maxLength": 256 },
+        "summary": { "$ref": "#/$defs/text", "maxLength": 1024 },
+        "kind": { "$ref": "#/$defs/text", "maxLength": 64 },
+        "tags": {
+          "type": "array", "maxItems": 32, "uniqueItems": true,
+          "items": { "$ref": "#/$defs/text", "maxLength": 64 }
+        },
+        "description": { "$ref": "#/$defs/text", "maxLength": 8192 },
+        "rationale": { "$ref": "#/$defs/text", "maxLength": 8192 },
+        "links": { "type": "array", "maxItems": 256, "uniqueItems": true, "items": { "$ref": "#/$defs/link" } }
+      }
+    },
+    "discovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "exclude": {
+          "type": "array", "maxItems": 128, "uniqueItems": true,
+          "items": { "$ref": "#/$defs/canonicalPath" }
+        }
+      }
+    },
+    "root": {
+      "allOf": [
+        { "$ref": "#/$defs/content" },
+        { "type": "object", "properties": { "discovery": { "$ref": "#/$defs/discovery" } } }
+      ],
+      "unevaluatedProperties": false
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://archie.dev/schemas/v1/root.schema.json",
+  "title": "Archie v1 repository-root archie.yaml",
+  "$ref": "record.schema.json#/$defs/root"
+}

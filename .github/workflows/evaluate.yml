@@ -1,0 +1,57 @@
+name: evaluate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evaluate:
+    name: evaluate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Prepare isolated test scratch
+        run: |
+          scratch="$RUNNER_TEMP/archie-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir -p "$scratch"
+          printf 'ARCHIE_TEST_SCRATCH=%s\n' "$scratch" >> "$GITHUB_ENV"
+
+      - name: Check formatting
+        run: |
+          unformatted="$(git ls-files -z -- '*.go' | xargs -0 gofmt -l)"
+          if [ -n "$unformatted" ]; then
+            printf 'Go files need formatting:\n%s\n' "$unformatted"
+            exit 1
+          fi
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -count=1 ./...

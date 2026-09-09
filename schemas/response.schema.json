@@ -1,0 +1,307 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://archie.dev/schemas/v1/response.schema.json",
+  "title": "Archie v1 JSON response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["api_version", "command", "status", "data", "diagnostics", "coverage", "continuation", "baseline"],
+  "properties": {
+    "api_version": { "const": "1" },
+    "command": { "enum": ["discover", "get", "context", "impact", "validate", "scaffold", "version", "unknown"] },
+    "status": { "enum": ["ok", "partial", "error"] },
+    "data": {},
+    "diagnostics": { "type": "array", "maxItems": 16, "items": { "$ref": "#/$defs/diagnostic" } },
+    "coverage": { "$ref": "#/$defs/coverage" },
+    "continuation": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/continuation" }] },
+    "baseline": { "$ref": "#/$defs/baseline" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "error" } } },
+      "then": {
+        "properties": {
+          "data": { "type": "null" },
+          "diagnostics": { "minItems": 1 },
+          "continuation": { "type": "null" }
+        }
+      },
+      "else": {
+        "properties": { "command": { "not": { "const": "unknown" } } },
+        "allOf": [
+          {
+            "if": { "properties": { "command": { "enum": ["discover", "get", "context", "impact"] } } },
+            "then": { "properties": { "data": { "$ref": "#/$defs/query" } } }
+          },
+          {
+            "if": { "properties": { "command": { "const": "validate" } } },
+            "then": { "properties": { "data": { "$ref": "#/$defs/validation" } } }
+          },
+          {
+            "if": { "properties": { "command": { "const": "scaffold" } } },
+            "then": { "properties": { "data": { "$ref": "#/$defs/scaffold" } } }
+          },
+          {
+            "if": { "properties": { "command": { "const": "version" } } },
+            "then": { "properties": { "data": { "$ref": "#/$defs/version" } } }
+          },
+          {
+            "if": { "properties": { "command": { "const": "get" }, "status": { "const": "ok" } } },
+            "then": { "properties": { "data": { "properties": { "records": { "minItems": 1, "maxItems": 1 } } } } }
+          },
+          {
+            "if": { "properties": { "command": { "const": "validate" }, "status": { "const": "ok" } } },
+            "then": { "properties": { "data": { "properties": { "valid": { "const": true } } } } }
+          },
+          {
+            "if": { "properties": { "command": { "const": "validate" }, "status": { "const": "partial" } } },
+            "then": { "properties": { "data": { "properties": { "valid": { "const": false } } } } }
+          }
+        ]
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "partial" } } },
+      "then": { "properties": { "diagnostics": { "minItems": 1 } } },
+      "else": { "properties": { "continuation": { "type": "null" } } }
+    },
+    {
+      "if": { "properties": { "command": { "enum": ["get", "validate", "scaffold", "version", "unknown"] } } },
+      "then": { "properties": { "continuation": { "type": "null" } } }
+    },
+    {
+      "if": { "properties": { "command": { "const": "get" }, "status": { "const": "partial" } } },
+      "then": { "properties": { "data": { "properties": { "records": { "maxItems": 1 } } } } }
+    },
+    {
+      "if": { "properties": { "command": { "enum": ["scaffold", "version"] } } },
+      "then": { "properties": { "status": { "enum": ["ok", "error"] } } }
+    }
+  ],
+  "$defs": {
+    "count": { "type": "integer", "minimum": 0 },
+    "path": { "$ref": "record.schema.json#/$defs/canonicalPath" },
+    "id": { "$ref": "record.schema.json#/$defs/id" },
+    "link": {
+      "type": "object",
+      "required": ["relation", "target", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "relation": { "enum": ["parent", "child"] },
+        "target": { "$ref": "#/$defs/id" },
+        "description": { "$ref": "record.schema.json#/$defs/text", "maxLength": 1024 }
+      }
+    },
+    "reference": {
+      "allOf": [
+        { "$ref": "record.schema.json#/$defs/link" },
+        {
+          "properties": {
+            "relation": { "enum": ["source", "test", "doc", "adr"] },
+            "target": { "$ref": "#/$defs/path" }
+          }
+        }
+      ]
+    },
+    "view": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record", "descriptor", "links", "reasons"],
+      "properties": {
+        "record": { "$ref": "root.schema.json" },
+        "descriptor": { "$ref": "#/$defs/path" },
+        "links": { "type": "array", "maxItems": 256, "items": {
+          "oneOf": [
+            { "$ref": "#/$defs/link" },
+            { "$ref": "#/$defs/reference" },
+            { "allOf": [
+              { "$ref": "record.schema.json#/$defs/link" },
+              { "properties": { "relation": { "enum": ["depends_on", "related_to"] } } }
+            ] }
+          ]
+        } },
+        "summary_only": { "const": true },
+        "reasons": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "enum": ["root", "ancestor", "id", "path", "keyword", "linked", "impact", "discovered"] }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "descriptor": { "const": "archie.yaml" } } },
+          "then": { "properties": { "record": { "$ref": "root.schema.json" } } },
+          "else": { "properties": { "record": { "$ref": "record.schema.json" } } }
+        }
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_id", "relation", "target", "state", "reason"],
+      "properties": {
+        "record_id": { "$ref": "#/$defs/id" },
+        "relation": { "enum": ["source", "test", "doc", "adr"] },
+        "target": { "$ref": "#/$defs/path" },
+        "state": { "enum": ["missing", "changed", "unchanged", "unknown", "unchecked"] },
+        "reason": {
+          "enum": ["missing", "bytes_differ", "bytes_equal", "no_baseline", "baseline_unavailable",
+            "not_in_baseline", "not_regular", "budget", "read_error", "not_requested", "unattributable", "renamed"]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "state": { "const": "missing" } } },
+          "then": { "properties": { "reason": { "const": "missing" } } }
+        },
+        {
+          "if": { "properties": { "state": { "const": "changed" } } },
+          "then": { "properties": { "reason": { "const": "bytes_differ" } } }
+        },
+        {
+          "if": { "properties": { "state": { "const": "unchanged" } } },
+          "then": { "properties": { "reason": { "const": "bytes_equal" } } }
+        },
+        {
+          "if": { "properties": { "state": { "const": "unchecked" } } },
+          "then": { "properties": { "reason": { "enum": ["budget", "not_requested"] } } }
+        },
+        {
+          "if": { "properties": { "state": { "const": "unknown" } } },
+          "then": {
+            "properties": {
+              "reason": { "enum": ["no_baseline", "baseline_unavailable", "not_in_baseline", "not_regular", "read_error", "unattributable", "renamed"] }
+            }
+          }
+        }
+      ]
+    },
+    "query": {
+      "type": "object", "additionalProperties": false,
+      "required": ["records", "evidence"],
+      "properties": {
+        "records": { "type": "array", "maxItems": 100, "items": { "$ref": "#/$defs/view" } },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+      }
+    },
+    "validation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["valid", "evidence"],
+      "properties": {
+        "valid": { "type": "boolean" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+      }
+    },
+    "scaffold": {
+      "type": "object", "additionalProperties": false, "required": ["path"],
+      "properties": { "path": { "$ref": "#/$defs/path" } }
+    },
+    "version": {
+      "type": "object", "additionalProperties": false, "required": ["version"],
+      "properties": { "version": { "type": "string", "minLength": 1 } }
+    },
+    "diagnostic": {
+      "type": "object", "additionalProperties": false, "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "enum": ["USAGE", "ROOT_REQUIRED", "YAML_INVALID", "SCHEMA_INVALID", "DUPLICATE_ID",
+            "PATH_UNSAFE", "PATH_CASE", "LINK_UNRESOLVED", "NOT_FOUND", "DISCOVERY_LIMIT",
+            "BUDGET_EXHAUSTED", "CURSOR_INVALID", "CURSOR_STALE", "BASELINE_UNAVAILABLE",
+            "EVIDENCE_MISSING", "EVIDENCE_UNKNOWN", "IO_ERROR", "ALREADY_EXISTS", "INTERNAL"]
+        },
+        "message": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "descriptor": { "$ref": "#/$defs/path" }
+      }
+    },
+    "coverage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["metadata", "selection", "evidence", "omissions"],
+      "properties": {
+        "diagnostic_counts": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 1 }
+        },
+        "metadata": {
+          "type": "object", "additionalProperties": false,
+          "required": ["discovered", "loaded", "excluded", "invalid", "complete"],
+          "properties": {
+            "discovered": { "$ref": "#/$defs/count" },
+            "loaded": { "$ref": "#/$defs/count" },
+            "excluded": { "$ref": "#/$defs/count" },
+            "invalid": { "$ref": "#/$defs/count" },
+            "complete": { "type": "boolean" }
+          }
+        },
+        "selection": {
+          "type": "object", "additionalProperties": false,
+          "required": ["matched", "returned", "omitted"],
+          "properties": {
+            "matched": { "$ref": "#/$defs/count" },
+            "returned": { "$ref": "#/$defs/count" },
+            "omitted": { "$ref": "#/$defs/count" }
+          }
+        },
+        "evidence": {
+          "type": "object", "additionalProperties": false,
+          "required": ["total", "checked", "unchecked"],
+          "properties": {
+            "total": { "$ref": "#/$defs/count" },
+            "checked": { "$ref": "#/$defs/count" },
+            "unchecked": { "$ref": "#/$defs/count" }
+          }
+        },
+        "omissions": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["reason", "count", "paths"],
+            "properties": {
+              "reason": {
+                "enum": ["excluded", "nested_repository", "symlink", "invalid", "discovery_limit",
+                  "record_budget", "link_budget", "byte_budget", "evidence_budget", "not_selected"]
+              },
+              "count": { "$ref": "#/$defs/count" },
+              "paths": { "type": "array", "maxItems": 16, "items": { "$ref": "#/$defs/path" } }
+            }
+          }
+        }
+      }
+    },
+    "continuation": {
+      "type": "object", "additionalProperties": false, "required": ["cursor", "remaining"],
+      "properties": {
+        "cursor": { "type": "string", "minLength": 1, "maxLength": 2048, "pattern": "^[A-Za-z0-9_-]+$" },
+        "remaining": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "baseline": {
+      "type": "object", "additionalProperties": false,
+      "required": ["requested", "resolved", "state", "reason"],
+      "properties": {
+        "requested": { "type": "string" },
+        "resolved": { "type": "string", "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})?$" },
+        "state": { "enum": ["none", "available", "unavailable"] },
+        "reason": { "enum": ["not_supplied", "resolved", "not_git", "not_found", "not_commit", "history_unavailable"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "state": { "const": "available" } } },
+          "then": {
+            "properties": {
+              "requested": { "minLength": 1 }, "resolved": { "minLength": 40 }, "reason": { "const": "resolved" }
+            }
+          },
+          "else": { "properties": { "resolved": { "const": "" } } }
+        },
+        {
+          "if": { "properties": { "state": { "const": "none" } } },
+          "then": {
+            "properties": { "requested": { "const": "" }, "reason": { "const": "not_supplied" } }
+          },
+          "else": { "properties": { "requested": { "minLength": 1 } } }
+        },
+        {
+          "if": { "properties": { "state": { "const": "unavailable" } } },
+          "then": { "properties": { "reason": { "enum": ["not_git", "not_found", "not_commit", "history_unavailable"] } } }
+        }
+      ]
+    }
+  }
+}
