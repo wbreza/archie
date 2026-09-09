@@ -1,0 +1,14 @@
+[
+  {"name":"duplicate-root-key","reason":"duplicate_key","yaml":"schema_version: \"1\"\nid: a\nid: b\nname: A\nsummary: A.\n"},
+  {"name":"duplicate-nested-key","reason":"duplicate_key","yaml":"schema_version: \"1\"\nid: a\nname: A\nsummary: A.\nlinks:\n  - relation: source\n    target: a.go\n    target: b.go\n    description: Source.\n"},
+  {"name":"multiple-documents","reason":"multiple_documents","yaml":"schema_version: \"1\"\nid: a\nname: A\nsummary: A.\n---\nschema_version: \"1\"\nid: b\nname: B\nsummary: B.\n"},
+  {"name":"malformed","reason":"syntax","yaml":"schema_version: \"1\"\nid: [unterminated\n"},
+  {"name":"anchor","reason":"anchor","yaml":"schema_version: \"1\"\nid: a\nname: &name A\nsummary: A.\n"},
+  {"name":"alias","reason":"alias","yaml":"schema_version: \"1\"\nid: a\nname: &name A\nsummary: *name\n"},
+  {"name":"merge","reason":"merge","yaml":"schema_version: \"1\"\nid: a\nname: A\nsummary: A.\n<<: {id: b}\n"},
+  {"name":"unsafe-tag","reason":"tag","yaml":"schema_version: \"1\"\nid: a\nname: !execute A\nsummary: A.\n"},
+  {"name":"explicit-standard-tag","reason":"tag","yaml":"schema_version: !!str 1\nid: a\nname: A\nsummary: A.\n"},
+  {"name":"non-string-key","reason":"non_string_key","yaml":"schema_version: \"1\"\nid: a\nname: A\nsummary: A.\n42: value\n"},
+  {"name":"directive","reason":"directive","yaml":"%YAML 1.1\n---\nschema_version: \"1\"\nid: a\nname: A\nsummary: A.\n"},
+  {"name":"bom","reason":"bom","yaml":"\ufeffschema_version: \"1\"\nid: a\nname: A\nsummary: A.\n"}
+]

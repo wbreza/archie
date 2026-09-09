@@ -1,0 +1,17 @@
+[
+  {"name":"no-baseline","baseline":"none","current":"same","before":"same","max_targets":16,"max_bytes":1048576,"state":"unknown","reason":"no_baseline"},
+  {"name":"equal","baseline":"available","current":"same","before":"same","max_targets":16,"max_bytes":1048576,"state":"unchanged","reason":"bytes_equal"},
+  {"name":"committed-change","baseline":"available","current":"new","before":"old","max_targets":16,"max_bytes":1048576,"state":"changed","reason":"bytes_differ"},
+  {"name":"dirty-working-tree","baseline":"available","current":"dirty","before":"old","index":"old","max_targets":16,"max_bytes":1048576,"state":"changed","reason":"bytes_differ"},
+  {"name":"staged-and-unstaged","baseline":"available","current":"working","before":"old","index":"staged","max_targets":16,"max_bytes":1048576,"state":"changed","reason":"bytes_differ"},
+  {"name":"deleted","baseline":"available","current":null,"before":"old","max_targets":16,"max_bytes":1048576,"state":"missing","reason":"missing"},
+  {"name":"missing-without-baseline","baseline":"none","current":null,"before":null,"max_targets":16,"max_bytes":1048576,"state":"missing","reason":"missing"},
+  {"name":"renamed-new-target","baseline":"available","current":"old","before":null,"max_targets":16,"max_bytes":1048576,"state":"unknown","reason":"not_in_baseline"},
+  {"name":"untracked","baseline":"available","current":"untracked","before":null,"max_targets":16,"max_bytes":1048576,"state":"unknown","reason":"not_in_baseline"},
+  {"name":"shallow-unavailable-history","baseline":"unavailable","current":"same","before":null,"max_targets":16,"max_bytes":1048576,"state":"unknown","reason":"baseline_unavailable"},
+  {"name":"adr-changed","baseline":"available","current":"Superseded","before":"Accepted","relation":"adr","max_targets":16,"max_bytes":1048576,"state":"changed","reason":"bytes_differ"},
+  {"name":"target-budget-zero","baseline":"available","current":"new","before":"old","max_targets":0,"max_bytes":1048576,"state":"unchecked","reason":"budget"},
+  {"name":"byte-budget-zero","baseline":"available","current":"new","before":"old","max_targets":16,"max_bytes":0,"state":"unchecked","reason":"budget"},
+  {"name":"both-sides-budget","baseline":"available","current":"new","before":"old","max_targets":16,"max_bytes":5,"state":"unchecked","reason":"budget"},
+  {"name":"concurrent-write","baseline":"available","current":"unstable","before":"old","unstable":true,"max_targets":16,"max_bytes":1048576,"state":"unknown","reason":"unattributable"}
+]

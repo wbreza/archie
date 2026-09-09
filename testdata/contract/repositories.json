@@ -1,0 +1,102 @@
+[
+  {
+    "name": "flat-named-and-repeated-hierarchy",
+    "files": {
+      "archie.yaml": "schema_version: \"1\"\nid: app\nname: Application\nsummary: Coordinates reporting.\n",
+      "renderer.archie.yaml": "schema_version: \"1\"\nid: renderer\nname: Renderer\nsummary: Renders reports.\n",
+      "mailer.archie.yaml": "schema_version: \"1\"\nid: mailer\nname: Mailer\nsummary: Sends messages.\n",
+      "payments/archie.yaml": "schema_version: \"1\"\nid: payments\nname: Payments\nsummary: Owns payment flow.\n",
+      "payments/billing.archie.yaml": "schema_version: \"1\"\nid: billing\nname: Billing\nsummary: Issues invoices.\n",
+      "payments/refunds.archie.yaml": "schema_version: \"1\"\nid: refunds\nname: Refunds\nsummary: Reverses charges.\n",
+      "payments/deep/tax.archie.yaml": "schema_version: \"1\"\nid: tax\nname: Tax\nsummary: Calculates tax.\n",
+      "payments/deep/region/archie.yaml": "schema_version: \"1\"\nid: region\nname: Region\nsummary: Regional tax rules.\n",
+      "notes.yaml": "not a descriptor",
+      "ARCHIE.YAML": "not a descriptor"
+    },
+    "parents": {"app":"","renderer":"app","mailer":"app","payments":"app","billing":"payments","refunds":"payments","tax":"payments","region":"payments"},
+    "ordered_descriptors": ["archie.yaml","mailer.archie.yaml","payments/archie.yaml","payments/billing.archie.yaml","payments/deep/region/archie.yaml","payments/deep/tax.archie.yaml","payments/refunds.archie.yaml","renderer.archie.yaml"],
+    "error": ""
+  },
+  {
+    "name": "cycles-and-shared-target",
+    "files": {
+      "archie.yaml": "schema_version: \"1\"\nid: app\nname: Application\nsummary: Coordinates reports.\n",
+      "a.archie.yaml": "schema_version: \"1\"\nid: a\nname: Renderer\nsummary: Renders reports.\nlinks:\n  - {relation: depends_on, target: b, description: Shared model.}\n  - {relation: related_to, target: a, description: Self association.}\n  - {relation: source, target: src/shared.go, description: Shared source.}\n",
+      "b.archie.yaml": "schema_version: \"1\"\nid: b\nname: Model\nsummary: Report model.\nlinks:\n  - {relation: depends_on, target: a, description: Renderer association.}\n  - {relation: source, target: src/shared.go, description: Shared source.}\n",
+      "src/shared.go": "package shared\n"
+    },
+    "parents": {"app":"","a":"app","b":"app"},
+    "ordered_descriptors": ["a.archie.yaml","archie.yaml","b.archie.yaml"],
+    "context": {"ids":["a"],"max_records":2,"first_page":["app","a"],"next_page":["b"],"evidence_targets":["src/shared.go"]},
+    "error": ""
+  },
+  {
+    "name": "duplicate-id-fatal",
+    "files": {
+      "archie.yaml": "schema_version: \"1\"\nid: app\nname: Application\nsummary: Coordinates reporting.\n",
+      "one.archie.yaml": "schema_version: \"1\"\nid: same\nname: One\nsummary: One record.\n",
+      "two.archie.yaml": "schema_version: \"1\"\nid: same\nname: Two\nsummary: Another record.\n"
+    },
+    "parents": {},
+    "ordered_descriptors": ["archie.yaml","one.archie.yaml","two.archie.yaml"],
+    "error": "DUPLICATE_ID"
+  },
+  {
+    "name": "moved-stable-id-safe-relative-link",
+    "files": {
+      "archie.yaml": "schema_version: \"1\"\nid: app\nname: Application\nsummary: Coordinates reporting.\n",
+      "new/renderer.archie.yaml": "schema_version: \"1\"\nid: renderer\nname: Renderer\nsummary: Renders reports.\nlinks: [{relation: source, target: ../src/render.go, description: Rendering source.}]\n",
+      "src/render.go": "package render\n"
+    },
+    "parents": {"app":"","renderer":"app"},
+    "ordered_descriptors": ["archie.yaml","new/renderer.archie.yaml"],
+    "resolved": {"renderer":["src/render.go"]},
+    "error": ""
+  },
+  {
+    "name": "root-exclusion-and-nested-repository",
+    "files": {
+      "archie.yaml": "schema_version: \"1\"\nid: app\nname: Application\nsummary: Coordinates reporting.\ndiscovery: {exclude: [generated]}\n",
+      "generated/archie.yaml": "invalid excluded metadata",
+      "vendor/archie.yaml": "invalid excluded metadata",
+      "external/.git": "gitdir: unrelated",
+      "external/archie.yaml": "invalid nested metadata",
+      "packages/a/archie.yaml": "schema_version: \"1\"\nid: package-a\nname: Package A\nsummary: A monorepo package.\n",
+      ".gitignore": "packages/\n"
+    },
+    "parents": {"app":"","package-a":"app"},
+    "ordered_descriptors": ["archie.yaml","packages/a/archie.yaml"],
+    "excluded": ["external","generated","vendor"],
+    "error": ""
+  },
+  {
+    "name": "path-escape",
+    "files": {
+      "archie.yaml": "schema_version: \"1\"\nid: app\nname: Application\nsummary: Coordinates reporting.\nlinks: [{relation: source, target: ../outside.go, description: Unsafe source.}]\n"
+    },
+    "parents": {},
+    "ordered_descriptors": ["archie.yaml"],
+    "error": "PATH_UNSAFE"
+  },
+  {
+    "name": "path-case-mismatch",
+    "files": {
+      "archie.yaml": "schema_version: \"1\"\nid: app\nname: Application\nsummary: Coordinates reporting.\nlinks: [{relation: source, target: src/Render.go, description: Source.}]\n",
+      "src/render.go": "package render\n"
+    },
+    "parents": {},
+    "ordered_descriptors": ["archie.yaml"],
+    "error": "PATH_CASE"
+  },
+  {
+    "name": "symlink-evidence",
+    "files": {
+      "archie.yaml": "schema_version: \"1\"\nid: app\nname: Application\nsummary: Coordinates reporting.\nlinks: [{relation: source, target: alias/source.go, description: Unsafe source.}]\n",
+      "src/source.go": "package source\n"
+    },
+    "symlinks": {"alias":"src"},
+    "parents": {},
+    "ordered_descriptors": ["archie.yaml"],
+    "error": "PATH_UNSAFE"
+  }
+]
