@@ -31,6 +31,16 @@ Scaffold requires an existing root/parent directory, validates generated YAML an
 creates exactly one new file. Use `rendering.archie.yaml` for a named sibling;
 non-root scaffolds require valid existing metadata and an unused ID.
 
+Archie's own architecture starts at [archie.yaml](archie.yaml), with sparse
+component records beside the implementation. With `archie` on PATH, from this
+repository root:
+
+```sh
+archie context --root . --query "architecture of Archie CLI and bounded query/evidence pipeline" --max-records 5 --max-bytes 32768
+archie get --root . --id query
+archie discover --root .
+```
+
 Run `go test ./...` and `go vet ./...`. Tests use `ARCHIE_TEST_SCRATCH` when set
 for their isolated fixtures; otherwise they create and remove fixture directories
 beneath each test package, never the system temporary directory.

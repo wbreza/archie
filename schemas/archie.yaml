@@ -1,0 +1,38 @@
+schema_version: "1"
+id: schemas
+name: Authoritative JSON schemas
+summary: Defines authored metadata and read-response shapes as bundled, offline JSON Schema resources.
+kind: contract
+tags: [schemas, json, validation, offline]
+description: |
+  The authored-record schema is the single shape definition for descriptive
+  metadata. The root schema extends it for root-only discovery exclusions;
+  the response schema separately describes the public JSON envelope and record
+  views. Unknown fields and authored parent/child relations are rejected rather
+  than becoming a parallel metadata dialect.
+
+  Go embedding ships these schemas with the binary. Compilation registers only
+  the bundled resources and refuses external resolution: schema identifiers are
+  not runtime download endpoints. The repository parser validates against the
+  root or record schema after strict YAML checks; transport and runtime tests
+  also use the response schema. Filesystem containment and graph meaning remain
+  runtime responsibilities beyond schema validation.
+links:
+  - relation: related_to
+    target: contract
+    description: Go transport types and command vocabulary constrained by these serialized shapes.
+  - relation: source
+    target: record.schema.json
+    description: Required descriptive fields, authored link shapes and root discovery definition.
+  - relation: source
+    target: root.schema.json
+    description: Root metadata schema reusing the authored-record definition.
+  - relation: source
+    target: response.schema.json
+    description: Public read envelope, derived views, evidence, diagnostics and response invariants.
+  - relation: source
+    target: schemas.go
+    description: Embedded resources and offline-only compilation.
+  - relation: test
+    target: schemas_test.go
+    description: Record/response fixtures and rejection of shape drift and unsafe file syntax.

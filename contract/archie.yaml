@@ -1,0 +1,40 @@
+schema_version: "1"
+id: contract
+name: Public Go contracts
+summary: Shares record and response transport types, command specifications and resource budgets across the runtime.
+kind: contract
+tags: [public, contract, api, transport, limits]
+description: |
+  This package is the shared Go vocabulary used by the CLI adapter, repository
+  loader and query pipeline. Authored records retain descriptor-relative links;
+  response views add descriptor provenance and a unified collection of derived
+  navigation, ID relations and canonical file pointers. Coverage, diagnostics,
+  continuation and explicit baseline state travel in the common response.
+
+  Command specifications and budget constants are shared rather than recreated
+  by each consumer. These transport types do not perform strict YAML parsing,
+  schema enforcement or filesystem safety checks. The JSON schemas remain the
+  shape authority, with behavioral semantics documented in the public contract.
+  API/schema version 1 is independent of the executable's injected build version.
+links:
+  - relation: related_to
+    target: schemas
+    description: Authoritative serialized shapes that the Go transport types and fixtures must match.
+  - relation: source
+    target: record.go
+    description: Authored record types, link relations and provenance-bearing read views.
+  - relation: source
+    target: response.go
+    description: Common envelope, command data, diagnostics, evidence, coverage and exit constants.
+  - relation: source
+    target: commands.go
+    description: Shared command specifications and cursor/query identity transport shapes.
+  - relation: source
+    target: limits.go
+    description: Discovery, parser, page and evidence budget constants.
+  - relation: test
+    target: contract_test.go
+    description: Transport round-trips and checks for command, budget, exit and query-identity drift.
+  - relation: doc
+    target: ../docs/contract-v1.md
+    description: Behavioral semantics and compatibility boundary for runtime and external consumers.

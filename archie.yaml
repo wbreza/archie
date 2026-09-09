@@ -1,0 +1,36 @@
+schema_version: "1"
+id: archie
+name: Archie CLI architecture
+summary: Local, repository-native architecture metadata for developers and coding agents.
+kind: application
+tags: [architecture, cli, local, metadata]
+description: |
+  Archie reads descriptive YAML kept alongside an application's source. The Go
+  executable delegates argument handling to the CLI adapter, which calls the
+  query pipeline. That pipeline loads a fresh repository graph, selects records
+  and checks selected file evidence before returning bounded JSON. Public Go
+  contracts and embedded JSON schemas keep these boundaries aligned.
+
+  Read commands do not execute descriptors or create persistent indexes, caches
+  or cursor files. Explicit scaffold is the metadata-writing exception: it
+  exclusively creates one validated descriptor without overwriting or creating
+  parent directories. Local archive packaging is separate from runtime queries.
+
+  These records map the main implementation boundaries, not every source file.
+  Metadata matches and known impact are orientation aids, not exhaustive code
+  analysis. An explicit Git baseline compares evidence bytes with working files;
+  unchanged bytes do not prove an architectural claim. Read the linked source
+  and tests before changing behavior.
+links:
+  - relation: source
+    target: cmd/archie/main.go
+    description: Process entry delegates to the CLI adapter and returns its exit code.
+  - relation: source
+    target: go.mod
+    description: Go minimum and dependencies for rooted filesystem access, strict YAML and schema validation.
+  - relation: doc
+    target: docs/contract-v1.md
+    description: Public command, discovery, containment, budget and evidence semantics.
+  - relation: doc
+    target: README.md
+    description: Developer entry point for building, running and navigating Archie itself.

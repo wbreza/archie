@@ -1,0 +1,36 @@
+schema_version: "1"
+id: packaging
+name: Local cross-platform packaging
+summary: Builds versioned CLI archives and checksums locally without release publication.
+kind: tooling
+tags: [packaging, archives, build, local, distribution]
+description: |
+  Packaging is a separate Go command run from the repository root, not part of
+  the read-query runtime. It cross-compiles the CLI with CGO disabled for Windows,
+  Linux and macOS on amd64 and arm64, injecting the requested build version.
+  Each archive contains the binary, README, public/build documentation and the
+  three JSON schemas. Windows archives are ZIP; Unix archives are tar.gz.
+
+  The caller supplies an existing output parent; a new version directory and
+  archive files are created without replacing existing output. SHA256SUMS covers
+  the archives. The invocation removes only its unique build child and leaves
+  failed output for inspection. Archive timestamps are fixed, but reproducible
+  binaries still depend on source, dependencies and toolchain. This tool does
+  not sign, upload or publish releases, and cross-compilation is not native
+  execution or acceptance on each target platform.
+links:
+  - relation: depends_on
+    target: cli
+    description: Builds the cmd/archie executable and injects its query-layer build version.
+  - relation: related_to
+    target: schemas
+    description: Includes the three public schema files with the binary and documentation.
+  - relation: source
+    target: main.go
+    description: Cross-compilation, exclusive versioned output, archive assembly and checksums.
+  - relation: test
+    target: main_test.go
+    description: Archive content/determinism checks and build input/environment validation.
+  - relation: doc
+    target: ../../docs/build-and-measure.md
+    description: Local packaging procedure and limits on reproducibility, native acceptance and measurement claims.
