@@ -9,8 +9,12 @@ go test ./...
 go vet ./...
 ```
 
-Uninjected development builds report `0.1.0-dev`. `api_version` and authored
-`schema_version` remain `"1"` independently of the build version.
+Local source builds without an override report `0.1.0-dev`. A versioned
+`go install` instead reports Go's embedded module version, including its `v`
+prefix; an explicit linker override always wins. `api_version` and authored
+`schema_version` remain `"1"` independently of the build version. See
+[Go versions and manual releases](versioning.md) for precedence, private-module
+access and the first `v0.1.0` tag (**pending publication**).
 
 ## Packaging (no release or publication)
 
@@ -22,7 +26,7 @@ go run ./tools/package -version 0.1.0-dev -out C:\artifacts
 This creates a new `archie_0.1.0-dev` directory, refusing existing output. It
 cross-compiles CGO-free binaries for Windows, Linux and macOS, each for amd64 and
 arm64. Windows uses ZIP; Unix uses tar.gz with executable permissions. Each
-archive contains the binary, README, contract/build documentation and three
+archive contains the binary, README, contract/build/versioning documentation and three
 schemas. `SHA256SUMS` covers the archives. Only a uniquely created `.build-*`
 child is removed; interrupted/failed output is retained for inspection.
 

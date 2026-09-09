@@ -32,5 +32,8 @@ links:
     target: docs/contract-v1.md
     description: Public command, discovery, containment, budget and evidence semantics.
   - relation: doc
+    target: docs/versioning.md
+    description: Go module version policy, private installation and manually approved immutable tags.
+  - relation: doc
     target: README.md
     description: Developer entry point for building, running and navigating Archie itself.

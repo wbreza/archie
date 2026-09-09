@@ -132,10 +132,12 @@ Graph validation plus creation is not a multi-process transaction:
 concurrent writers to different descriptors still require fresh validation for
 duplicate IDs. No lock files, rollback deletion, force flags or implicit mkdir.
 Read commands create no files, persistent cursors, indexes, databases or caches.
-`version` returns `data:{"version":"<build version>"}`; development defaults to
-`0.1.0-dev`, independently of schema/API version `"1"`. See
-[build and measurement](build-and-measure.md) for linker injection and local
-Windows/Linux/macOS archives (no publication).
+`version` returns `data:{"version":"<build version>"}`: a nonempty linker
+override, otherwise the installed Go module version verbatim, otherwise
+`0.1.0-dev` for local source builds. Schema/API version remains `"1"`.
+See [versioning](versioning.md) for precedence and immutable Go tags (first
+`v0.1.0` pending publication), and [build and measurement](build-and-measure.md)
+for linker injection and local Windows/Linux/macOS archives (no publication).
 
 ## Deterministic selection, budgets and continuation (W3 obligations)
 
@@ -337,6 +339,8 @@ and no continuation. Validation without `--evidence` emits an empty evidence lis
 
 - Implemented the already specified exclusive scaffold and advertised help.
 - Added build-version injection and local cross-platform packaging.
+- Added installed-module version reporting without changing the JSON envelope,
+  schema/API versions or explicit linker-override precedence.
 - Added real-process scaffold/refusal/readback/no-mutation tests and an opt-in
   full-process 10,000-file/500-record latency harness.
 - No read response schema, `context`/`get` API, flag set, record schema or

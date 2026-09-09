@@ -24,6 +24,11 @@ description: |
   unknown; budget-unvisited targets are unchecked. Changed and unchanged report
   byte comparison, not semantic freshness. Missing evidence makes queries
   partial and evidence validation fail; changed bytes alone are informational.
+
+  Version is a build-information-only exception: it does not load the graph.
+  An explicit linker override wins over the installed Go module version;
+  local source builds retain the development fallback. No Git or network
+  lookup is used to infer a release from a checkout.
 links:
   - relation: depends_on
     target: repository
@@ -34,6 +39,12 @@ links:
   - relation: source
     target: run.go
     description: Read orchestration, bounded response packing, validation and continuation handling.
+  - relation: source
+    target: version.go
+    description: Linker override, installed module version and local development fallback.
+  - relation: doc
+    target: ../../docs/versioning.md
+    description: Immutable module tag policy and build-version precedence, independent of API/schema versions.
   - relation: source
     target: select.go
     description: Deterministic context seeds, ancestor projections, unified links and known-impact expansion.
