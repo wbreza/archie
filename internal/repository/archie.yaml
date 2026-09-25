@@ -18,11 +18,17 @@ description: |
   schema or unresolved-link failures can remain explicit gaps for scoped reads;
   global validation rejects them.
 
+  Validation defers file-reference safety checks to the exhaustive query
+  validator rather than repeating the loader's scoped-query inspection pass.
+  Underlying schema constraint diagnostics survive propagation into root links.
+
   Filesystem operations use Go's rooted access with exact-case inspection,
   containment checks, rejection of symlinks/reparse points and multiply linked
   regular files, bounded reads and identity rechecks. These checks detect races
   but are not an atomic filesystem snapshot. Explicit scaffold reuses validation
   and containment before exclusive creation in an existing parent directory.
+  Validation can reuse bounded directory listings within one invocation only
+  while their observed identities and metadata remain stable.
 links:
   - relation: depends_on
     target: schemas
@@ -51,3 +57,6 @@ links:
   - relation: test
     target: security_regression_test.go
     description: Hard-linked descriptor/evidence rejection and concurrent discovery change checks.
+  - relation: test
+    target: validation_test.go
+    description: Bounded stable directory-listing reuse and hard-link changes after reference inspection.

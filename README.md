@@ -3,7 +3,7 @@ Repository-native architectural knowledge for coding agents.
 
 Archie v1 is a local Go CLI: strict metadata loading, bounded context/navigation,
 known impact, validation, explicit Git evidence comparison and non-overwriting
-descriptor scaffolding. Read commands are cache-free and do not mutate files.
+descriptor scaffolding. Read commands have no persistent cache and do not mutate files.
 
 - [Public v1 contract](docs/contract-v1.md): commands, JSON, safety and budgets.
 - [Authored record schema](schemas/record.schema.json)
@@ -24,7 +24,7 @@ go build -o archie.exe ./cmd/archie
 .\archie.exe context --root C:\path\to\application --query "report delivery"
 .\archie.exe get --root C:\path\to\application --id renderer
 .\archie.exe impact --root C:\path\to\application --path src/render.go
-.\archie.exe validate --root C:\path\to\application --evidence
+.\archie.exe validate --root C:\path\to\application
 .\archie.exe scaffold --root C:\path\to\application --file archie.yaml --id app --name "Application" --summary "Owns application boundaries."
 ```
 
@@ -35,6 +35,17 @@ matches never imply missing implementation. Without an explicit full commit
 Scaffold requires an existing root/parent directory, validates generated YAML and
 creates exactly one new file. Use `rendering.archie.yaml` for a named sibling;
 non-root scaffolds require valid existing metadata and an unused ID.
+
+Plain `validate` checks schemas, record links and **every distinct referenced
+file's existence and path/identity safety**, within explicit work limits.
+It returns compact counts in `coverage.references` and bounded, actionable
+diagnostics. Missing/unsafe references fail; excluded or unvisited references
+cannot report complete success. File contents are not read for these checks:
+existence/safety is not complete readability or semantic freshness.
+`--evidence` still requests optional bounded evidence detail/comparison.
+See the [validation contract](docs/contract-v1.md#complete-reference-validation)
+for limits, compatibility and the success conditions a future preflight consumer
+must require.
 
 Archie's own architecture starts at [archie.yaml](archie.yaml), with sparse
 component records beside the implementation. With `archie` on PATH, from this

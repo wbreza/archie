@@ -3,6 +3,7 @@ package contract
 const (
 	MaxEntries              = 20000
 	MaxDescriptors          = 2000
+	MaxReferences           = 20000
 	MaxDescriptorBytes      = 65536
 	MaxYAMLNodes            = 4096
 	MaxYAMLDepth            = 32

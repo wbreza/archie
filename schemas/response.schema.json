@@ -17,6 +17,20 @@
   },
   "allOf": [
     {
+      "if": { "properties": { "command": { "const": "validate" } } },
+      "then": { "properties": { "coverage": { "required": ["references"] } } },
+      "else": { "properties": { "coverage": { "not": { "required": ["references"] } } } }
+    },
+    {
+      "if": { "properties": { "command": { "const": "validate" }, "status": { "const": "ok" } } },
+      "then": {
+        "properties": { "coverage": { "properties": { "references": { "properties": {
+          "complete": { "const": true }, "unchecked": { "const": 0 },
+          "missing": { "const": 0 }, "invalid": { "const": 0 }
+        } } } } }
+      }
+    },
+    {
       "if": { "properties": { "status": { "const": "error" } } },
       "then": {
         "properties": {
@@ -205,16 +219,35 @@
           "enum": ["USAGE", "ROOT_REQUIRED", "YAML_INVALID", "SCHEMA_INVALID", "DUPLICATE_ID",
             "PATH_UNSAFE", "PATH_CASE", "LINK_UNRESOLVED", "NOT_FOUND", "DISCOVERY_LIMIT",
             "BUDGET_EXHAUSTED", "CURSOR_INVALID", "CURSOR_STALE", "BASELINE_UNAVAILABLE",
-            "EVIDENCE_MISSING", "EVIDENCE_UNKNOWN", "IO_ERROR", "ALREADY_EXISTS", "INTERNAL"]
+            "EVIDENCE_MISSING", "EVIDENCE_UNKNOWN", "REFERENCE_UNCHECKED", "IO_ERROR", "ALREADY_EXISTS", "INTERNAL"]
         },
         "message": { "type": "string", "minLength": 1, "maxLength": 256 },
-        "descriptor": { "$ref": "#/$defs/path" }
+        "descriptor": { "$ref": "#/$defs/path" },
+        "target": { "$ref": "#/$defs/path" }
       }
     },
     "coverage": {
       "type": "object", "additionalProperties": false,
       "required": ["metadata", "selection", "evidence", "omissions"],
       "properties": {
+        "references": {
+          "type": "object", "additionalProperties": false,
+          "required": ["total", "checked", "unchecked", "missing", "invalid", "complete"],
+          "properties": {
+            "total": { "$ref": "#/$defs/count" },
+            "checked": { "$ref": "#/$defs/count" },
+            "unchecked": { "$ref": "#/$defs/count" },
+            "missing": { "$ref": "#/$defs/count" },
+            "invalid": { "$ref": "#/$defs/count" },
+            "complete": { "type": "boolean" }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "complete": { "const": true } } },
+              "then": { "properties": { "unchecked": { "const": 0 } } }
+            }
+          ]
+        },
         "diagnostic_counts": {
           "type": "object",
           "additionalProperties": { "type": "integer", "minimum": 1 }
@@ -255,7 +288,8 @@
             "properties": {
               "reason": {
                 "enum": ["excluded", "nested_repository", "symlink", "invalid", "discovery_limit",
-                  "record_budget", "link_budget", "byte_budget", "evidence_budget", "not_selected"]
+                  "record_budget", "link_budget", "byte_budget", "evidence_budget", "not_selected",
+                  "reference_budget", "reference_excluded"]
               },
               "count": { "$ref": "#/$defs/count" },
               "paths": { "type": "array", "maxItems": 16, "items": { "$ref": "#/$defs/path" } }

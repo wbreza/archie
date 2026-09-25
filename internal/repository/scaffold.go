@@ -47,7 +47,7 @@ func Scaffold(root, target string, record contract.Record) (string, *Problem) {
 		return "", problem("IO_ERROR", "Scaffold parent directory must already exist.")
 	}
 	if p != "archie.yaml" {
-		g, e := load(fs)
+		g, e := load(fs, false)
 		if e != nil {
 			return "", e
 		}

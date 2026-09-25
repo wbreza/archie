@@ -16,6 +16,8 @@ description: |
   The adapter writes the result and treats failed or short output writes as
   operational failures. Version and explicit scaffold are dispatched through
   the same query entry point, while scaffold file creation belongs to repository.
+  Plain validate performs complete bounded reference checks without additional
+  flags; evidence flags still request optional detail and explicit comparison.
 links:
   - relation: depends_on
     target: query
@@ -38,3 +40,6 @@ links:
   - relation: test
     target: scaffold_test.go
     description: Real-process scaffold creation, refusal, readback and read-command non-mutation checks.
+  - relation: test
+    target: validation_test.go
+    description: Native complete-reference validation, flag non-bypass and representative process measurements.

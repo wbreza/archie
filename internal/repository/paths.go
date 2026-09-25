@@ -13,9 +13,12 @@ import (
 )
 
 type Filesystem struct {
-	Root     *os.Root
-	Path     string
-	observed map[string]os.FileInfo
+	Root          *os.Root
+	Path          string
+	observed      map[string]os.FileInfo
+	references    map[string]bool
+	listings      map[string][]os.DirEntry
+	listedEntries int
 }
 
 func Open(root string) (*Filesystem, *Problem) {
@@ -42,7 +45,7 @@ func Open(root string) (*Filesystem, *Problem) {
 	if err != nil {
 		return nil, problem("IO_ERROR", "Cannot open repository root.")
 	}
-	return &Filesystem{Root: r, Path: absolute, observed: map[string]os.FileInfo{}}, nil
+	return &Filesystem{Root: r, Path: absolute, observed: map[string]os.FileInfo{}, references: map[string]bool{}}, nil
 }
 
 func (f *Filesystem) Close() error { return f.Root.Close() }
@@ -163,6 +166,14 @@ func (f *Filesystem) entries(p string, max int) ([]os.DirEntry, *Problem) {
 	if e := f.observe(p, before); e != nil {
 		return nil, e
 	}
+	// Validation can reuse names only while the observed directory is stable.
+	// Identity and metadata are rechecked even when enumeration is reused.
+	if entries, ok := f.listings[p]; ok {
+		if len(entries) >= max {
+			return nil, problem("DISCOVERY_LIMIT", "Repository entry limit exceeded.")
+		}
+		return entries, nil
+	}
 	d, err := f.Root.OpenFile(filepath.FromSlash(p), readFlags(), 0)
 	if err != nil {
 		return nil, problem("IO_ERROR", "Cannot enumerate repository directory.")
@@ -180,10 +191,15 @@ func (f *Filesystem) entries(p string, max int) ([]os.DirEntry, *Problem) {
 		return nil, problem("DISCOVERY_LIMIT", "Repository entry limit exceeded.")
 	}
 	after, statErr := f.Root.Lstat(filepath.FromSlash(p))
-	if statErr != nil || reparse(after) || !os.SameFile(before, after) {
+	if statErr != nil || reparse(after) || !os.SameFile(before, after) ||
+		before.Size() != after.Size() || !before.ModTime().Equal(after.ModTime()) {
 		return nil, problem("IO_ERROR", "Directory changed during enumeration.")
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
+	if f.listings != nil && len(entries) <= contract.MaxEntries-f.listedEntries {
+		f.listings[p] = entries
+		f.listedEntries += len(entries)
+	}
 	return entries, nil
 }
 
@@ -240,10 +256,30 @@ func (f *Filesystem) observe(p string, info os.FileInfo) *Problem {
 	return nil
 }
 
+// InspectReference retains the inspection for the invocation's final Verify.
+// Missing targets are covered by the existing ancestor-directory observations.
+func (f *Filesystem) InspectReference(p string) (os.FileInfo, *Problem) {
+	info, e := f.Inspect(p)
+	if e == nil && info != nil {
+		e = f.observe(p, info)
+		if e == nil {
+			f.references[p] = true
+		}
+	}
+	return info, e
+}
+
 func (f *Filesystem) Verify() *Problem {
 	for p, before := range f.observed {
 		info, err := f.Root.Lstat(filepath.FromSlash(p))
-		if err != nil || reparse(info) || !os.SameFile(before, info) || before.Size() != info.Size() || !before.ModTime().Equal(info.ModTime()) {
+		if f.references[p] && err == nil {
+			var e *Problem
+			info, e = f.Inspect(p)
+			if e != nil {
+				return e
+			}
+		}
+		if err != nil || info == nil || reparse(info) || !os.SameFile(before, info) || before.Size() != info.Size() || !before.ModTime().Equal(info.ModTime()) {
 			return problem("IO_ERROR", "Repository changed during discovery.")
 		}
 	}

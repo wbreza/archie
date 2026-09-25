@@ -15,15 +15,38 @@ import (
 type Response = contract.Response[any]
 
 func empty(command contract.Command) Response {
-	return Response{APIVersion: contract.Version, Command: command, Status: contract.OK,
+	r := Response{APIVersion: contract.Version, Command: command, Status: contract.OK,
 		Diagnostics: []contract.Diagnostic{}, Coverage: contract.Coverage{Omissions: []contract.Omission{}},
 		Baseline: contract.Baseline{State: "none", Reason: "not_supplied"}}
+	if command == contract.Validate {
+		r.Coverage.References = &contract.ReferenceCoverage{}
+	}
+	return r
 }
 
 func Failure(command contract.Command, p *repository.Problem) ([]byte, int) {
+	return failure(command, p, contract.DefaultMaxBytes)
+}
+
+func failure(command contract.Command, p *repository.Problem, maxBytes int) ([]byte, int) {
 	r := empty(command)
+	r.Coverage.Metadata = p.Metadata
+	if len(p.Diagnostics) == 0 {
+		addDetailedDiagnostic(&r, contract.Diagnostic{Code: p.Code, Message: p.Message, Descriptor: p.Descriptor})
+	} else {
+		for _, d := range p.Diagnostics {
+			addDetailedDiagnostic(&r, d)
+		}
+	}
 	r.Status = contract.Error
-	r.Diagnostics = []contract.Diagnostic{{Code: p.Code, Message: p.Message, Descriptor: p.Descriptor}}
+	for len(r.Diagnostics) > 1 && len(encode(r)) > maxBytes {
+		r.Diagnostics = r.Diagnostics[:len(r.Diagnostics)-1]
+	}
+	if len(encode(r)) > maxBytes {
+		// Preserve the cause and occurrence counts when even one maximum-length
+		// descriptor cannot fit a small caller budget.
+		r.Diagnostics[0].Descriptor, r.Diagnostics[0].Target = "", ""
+	}
 	return encode(r), exit(r)
 }
 
@@ -35,6 +58,14 @@ func exit(r Response) int {
 		return contract.ExitOK
 	}
 	code := contract.ExitInvalid
+	for diagnostic := range r.Coverage.DiagnosticCounts {
+		if diagnostic == "USAGE" || strings.HasPrefix(diagnostic, "CURSOR_") {
+			return contract.ExitUsage
+		}
+		if diagnostic == "IO_ERROR" || diagnostic == "INTERNAL" || diagnostic == "ALREADY_EXISTS" {
+			code = contract.ExitOperational
+		}
+	}
 	for _, d := range r.Diagnostics {
 		if d.Code == "USAGE" || strings.HasPrefix(d.Code, "CURSOR_") {
 			return contract.ExitUsage
@@ -70,9 +101,13 @@ func Run(o Options) ([]byte, int) {
 		data(&r, contract.ScaffoldData{Path: p})
 		return encode(r), 0
 	}
-	g, err := repository.Load(o.Root)
+	load := repository.Load
+	if o.Command == contract.Validate {
+		load = repository.LoadForValidation
+	}
+	g, err := load(o.Root)
 	if err != nil {
-		return Failure(o.Command, err)
+		return failure(o.Command, err, o.Limits.OutputBytes)
 	}
 	defer g.FS.Close()
 	for i, p := range o.Paths {
@@ -95,7 +130,7 @@ func Run(o Options) ([]byte, int) {
 			r := empty(o.Command)
 			r.Coverage.Metadata, r.Baseline = g.Metadata, checker.baseline
 			for _, d := range g.Diagnostics {
-				addDiagnostic(&r, d.Code, d.Message)
+				addDetailedDiagnostic(&r, d)
 			}
 			r.Status = contract.Error
 			addOmission(&r, "invalid", len(g.Invalid))
@@ -290,6 +325,19 @@ func addOmission(r *Response, reason string, count int) {
 	r.Coverage.Omissions = append(r.Coverage.Omissions, contract.Omission{Reason: reason, Count: count, Paths: []string{}})
 }
 
+func addDetailedDiagnostic(r *Response, d contract.Diagnostic) {
+	r.Status = contract.Partial
+	if r.Coverage.DiagnosticCounts == nil {
+		r.Coverage.DiagnosticCounts = map[string]int{}
+	}
+	r.Coverage.DiagnosticCounts[d.Code]++
+	// Samples are bounded by bytes too: two maximum-length Unicode paths
+	// must not turn a useful failure into an oversized envelope.
+	if len(r.Diagnostics) < 16 && len(encode(r.Diagnostics))+len(encode(d)) <= 16384 {
+		r.Diagnostics = append(r.Diagnostics, d)
+	}
+}
+
 func bounded(r Response, max int) ([]byte, int) {
 	sort.Slice(r.Coverage.Omissions, func(i, j int) bool { return r.Coverage.Omissions[i].Reason < r.Coverage.Omissions[j].Reason })
 	b := encode(r)
@@ -340,6 +388,17 @@ func cursorOffset(token, query, snapshot string, count int) (int, *repository.Pr
 }
 
 func validate(g *repository.Graph, o Options, candidates []candidate, checker *evidenceChecker) ([]byte, int) {
+	r := validateReferences(g, contract.MaxReferences)
+	r.Baseline = checker.baseline
+	if r.Status == contract.OK {
+		references := r.Coverage.References
+		r = validateEvidence(g, o, candidates, checker)
+		r.Coverage.References = references
+	}
+	return finishValidation(g, r, o.Limits.OutputBytes)
+}
+
+func validateEvidence(g *repository.Graph, o Options, candidates []candidate, checker *evidenceChecker) Response {
 	tasks := []contract.Evidence{}
 	if o.Evidence {
 		tasks = evidenceFor(candidates, func(p string) contract.Evidence {
@@ -377,5 +436,5 @@ func validate(g *repository.Graph, o Options, candidates []candidate, checker *e
 			break
 		}
 	}
-	return bounded(r, o.Limits.OutputBytes)
+	return r
 }

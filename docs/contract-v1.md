@@ -2,7 +2,7 @@
 
 This is the shared contract for the W2–W4 runtime and W5 consumers. The runtime
 supports read commands, explicit scaffolding, local packaging and measurements.
-The approved scope is local, deterministic, read-only and cache-free, except
+The approved scope is local, deterministic, read-only and free of persistent caches, except
 for explicit non-overwriting `scaffold`. No descriptor is executable instruction.
 
 ## Authority and compatibility
@@ -100,7 +100,7 @@ flags are `USAGE`. Flags follow the subcommand; `--flag=value` and
 | `archie get --id ID` | Exactly one record, shallow derived links, no ancestors. |
 | `archie context --query TEXT` | Bounded orientation; `--query` may be omitted if at least one selector is present. |
 | `archie impact --path PATH` | Known records whose descriptors or canonical file links intersect paths; repeat `--path`. No exhaustive impact claim. |
-| `archie validate` | Global metadata/link checks; optional `--evidence` enables bounded file checks. |
+| `archie validate` | Global metadata/link checks and complete bounded file-reference inspection; optional `--evidence` adds bounded detail/comparison. |
 | `archie scaffold --file PATH --id ID --name NAME --summary TEXT` | Create one minimal descriptor exclusively. |
 | `archie version` | Build version in the common envelope; no repository scan. |
 
@@ -132,6 +132,8 @@ Graph validation plus creation is not a multi-process transaction:
 concurrent writers to different descriptors still require fresh validation for
 duplicate IDs. No lock files, rollback deletion, force flags or implicit mkdir.
 Read commands create no files, persistent cursors, indexes, databases or caches.
+Validation may reuse directory listings within its invocation, bounded to
+20,000 cached entries and guarded by fresh directory identity/metadata checks.
 `version` returns `data:{"version":"<build version>"}`: a nonempty linker
 override, otherwise the installed Go module version verbatim, otherwise
 `0.1.0-dev` for local source builds. Schema/API version remains `"1"`.
@@ -148,6 +150,7 @@ for linker injection and local Windows/Linux/macOS archives (no publication).
 | Entire stdout JSON including LF (bytes) | 32768 | 4096–1048576 |
 | Distinct selected evidence targets inspected | 16 | 0–256 |
 | Current + baseline evidence bytes combined | 1048576 | 0–16777216 |
+| Mandatory distinct references inspected by validate | 20000 | Fixed safety ceiling |
 
 Never truncate authored fields or remove authored links from the nested record.
 Exception: context records selected **only** for ancestor orientation carry
@@ -270,6 +273,80 @@ architecture. Missing evidence makes query partial and evidence validation fail.
 Changed evidence alone is informational/ok. Expected unknown/no_baseline does
 not force partial; unavailable *requested* comparison/read failure does.
 
+## Complete reference validation
+
+Plain `archie validate` performs mandatory reference inspection without
+`--evidence`, a baseline, or a summary flag. After strict metadata and record-link
+validation, it deduplicates all canonical source/test/doc/ADR targets and checks
+them in target lexical order. Each target must exist as a safe regular file.
+Existing exact-case, containment, reparse-point and hard-link protections apply;
+inspection briefly opens regular files for identity and link-count checks, but
+does not read their contents. A large file does not consume an evidence-byte
+budget merely by being referenced.
+
+The fixed work ceiling is 20,000 distinct reference inspections. Discovery still
+has its independent entry/descriptor limits. Reporting is separate from this
+work: successful inspections produce counts, not per-reference rows. Bounded
+failure samples never stop remaining inspections. Diagnostics include canonical
+`descriptor` and `target` where available; repeated references share one initial
+inspection and use their first descriptor in discovery order as sample origin.
+At most 16 detailed diagnostics and 16 KiB of encoded diagnostic samples are kept,
+within the fixed 32-KiB validation output budget. All occurrences are counted in
+`coverage.diagnostic_counts`, including unsampled I/O errors used for exit
+precedence.
+
+Validation responses include `coverage.references` independently of
+`coverage.evidence`:
+
+| Field | Meaning |
+| --- | --- |
+| `total` | Distinct referenced files known from structurally valid metadata. |
+| `checked` | Required inspections attempted, including missing/invalid targets. |
+| `unchecked` | Required inspections not attempted; `total = checked + unchecked`. |
+| `missing` | Inspected targets that do not exist. |
+| `invalid` | Inspected targets failing file-kind, access or safety checks. |
+| `complete` | Metadata and required inspections completed without gaps, I/O uncertainty or detected mutation; not a validity claim. |
+
+Zero counts with `complete:false` after a metadata/discovery error do **not**
+mean that the repository has no references. A missing target can have complete
+inspection coverage while making the validation invalid. File references into
+excluded/nested-repository boundaries are unchecked, with `REFERENCE_UNCHECKED`
+and `reference_excluded` omissions; they cannot silently pass. The reference
+ceiling produces `BUDGET_EXHAUSTED` and `reference_budget` omissions. Neither
+condition permits valid/success. Unsafe symlink references are rejected, not
+treated as intentional exclusions.
+
+Inspection observations are verified again before returning, including file
+identity, size/mtime, link safety and the directories containing missing targets.
+Observed mutation fails closed. This is not an atomic filesystem snapshot;
+arbitrary changes that preserve the observed identity/metadata cannot be ruled
+out. Full file-content readability and semantic correctness are not established.
+
+Optional `--evidence`, `--baseline`, `--max-evidence` and
+`--max-evidence-bytes` retain their existing detail/comparison behavior and
+coverage meanings. They cannot disable or restrict mandatory inspections.
+Mandatory failures/gaps are returned before optional detail is attempted.
+Optional evidence can still be partial because its own target/byte/output
+budgets are exhausted. Without a baseline, comparison remains unknown.
+Plain validation emits `evidence:[]`; it never labels inspected files unchanged.
+
+This is an **intentional validation-contract enhancement** within API generation
+`"1"`: plain validation is stricter, `coverage.references` is required on validate
+responses, and diagnostics may carry `target`. Authored schemas and other query
+command behavior are unchanged. Consumers validating responses against an older
+strict schema must update it. A future required-check consumer must require a
+supported API, successful exit/status, `data.valid:true`, complete metadata and
+`coverage.references.complete:true`, reconciled checked/total counts and zero
+missing/invalid/unchecked targets. API `"1"` or exit 0 alone from an older binary
+does not establish this guarantee. Unsupported or absent coverage must fail
+closed rather than be treated as an empty successful check.
+
+Schema errors preserve bounded field/constraint details and descriptor paths.
+For example, a description with 8,995 characters reports `/description` and the
+8,192 limit. If its omission invalidates an outgoing root link, the underlying
+schema error is retained before the consequential link diagnostics. Root errors
+remain fatal; no usable partial graph is published.
+
 ## JSON envelope and error/exit behavior
 
 See `schemas/response.schema.json` and `contract/response.go`. `data.records`
@@ -317,10 +394,12 @@ the complete rows, including all input bytes/limits and expected
 errors/parents/exclusions/resolutions/pages, as runtime tests. Their enforcement
 is a remaining delivery obligation, not a W1 test pass or waived requirement.
 
-Global `validate --evidence` bounds its evidence output before reading selected
-files. If the output budget is exhausted, remaining unique targets count as
+After mandatory reference inspection, `validate --evidence` bounds its optional
+evidence output before reading selected content. If that output budget is exhausted,
+remaining unique evidence targets count as
 unchecked (unless shared with an inspected target), with explicit byte omissions
-and no continuation. Validation without `--evidence` emits an empty evidence list.
+and no continuation. This does not omit mandatory reference checks or change
+`coverage.references`. Validation without `--evidence` emits an empty evidence list.
 
 ## W2/W3 pre-release contract reconciliation
 

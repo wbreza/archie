@@ -10,6 +10,8 @@ description: |
   response views add descriptor provenance and a unified collection of derived
   navigation, ID relations and canonical file pointers. Coverage, diagnostics,
   continuation and explicit baseline state travel in the common response.
+  Validation adds separate reference-inspection coverage without redefining
+  optional evidence coverage or asserting content readability or semantic truth.
 
   Command specifications and budget constants are shared rather than recreated
   by each consumer. These transport types do not perform strict YAML parsing,

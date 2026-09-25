@@ -18,6 +18,12 @@ description: |
   is not silently treated as checked, and partial results expose their gaps.
   All selection and evidence state is in memory for this invocation.
 
+  Plain validation checks every distinct referenced file for existence and
+  existing path/identity safety, independently of optional evidence and output
+  limits. Reference coverage is separate from evidence coverage; bounded failure
+  samples do not stop mandatory inspections. Excluded or unvisited references
+  cannot produce complete success. Final verification detects observed mutation.
+
   Evidence comparison uses safe current files and an explicitly supplied full
   Git commit ID. Git is an offline, bounded object reader with no fetching,
   filters or repository mutation. Without a baseline, existing evidence is
@@ -40,6 +46,9 @@ links:
     target: run.go
     description: Read orchestration, bounded response packing, validation and continuation handling.
   - relation: source
+    target: validation.go
+    description: Mandatory deduplicated reference inspection, bounded diagnostics and final verification.
+  - relation: source
     target: version.go
     description: Linker override, installed module version and local development fallback.
   - relation: doc
@@ -60,3 +69,6 @@ links:
   - relation: test
     target: review_regression_test.go
     description: Bounded evidence validation, pageable records and unavailable/subdirectory baseline regressions.
+  - relation: test
+    target: validation_test.go
+    description: Complete reference coverage, late failures, schema causes, safety, mutation and workload measurements.
