@@ -84,6 +84,9 @@ func TestAllResponseDataTypes(t *testing.T) {
 				Coverage: contract.Coverage{Omissions: []contract.Omission{}},
 				Baseline: contract.Baseline{State: "none", Reason: "not_supplied"},
 			}
+			if tc.command == contract.Validate {
+				envelope.Coverage.References = &contract.ReferenceCoverage{Complete: true}
+			}
 			data, err := json.Marshal(envelope)
 			if err != nil {
 				t.Fatal(err)
@@ -139,6 +142,9 @@ func TestCommandSpecifications(t *testing.T) {
 }
 
 func TestBudgetsAndExitCodes(t *testing.T) {
+	if contract.MaxReferences != 20000 {
+		t.Fatal("mandatory reference inspection ceiling changed")
+	}
 	got := []int{contract.MaxEntries, contract.MaxDescriptors, contract.MaxDescriptorBytes, contract.MaxYAMLNodes, contract.MaxYAMLDepth,
 		contract.DefaultMaxRecords, contract.HardMaxRecords, contract.DefaultMaxLinks, contract.HardMaxLinks,
 		contract.DefaultMaxBytes, contract.MinMaxBytes, contract.HardMaxBytes, contract.DefaultMaxEvidence, contract.HardMaxEvidence,

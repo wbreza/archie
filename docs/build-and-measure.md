@@ -69,3 +69,36 @@ validation and discovery can be partial. Reports identify platform/toolchain,
 workload and options. Results are observations, not thresholds, capacity
 guarantees, comparative retrieval-quality evaluations or native cross-platform
 performance claims.
+
+## Complete-reference validation workload
+
+The focused fixture models **37 descriptors and 493 distinct referenced files**,
+including source, test, doc and ADR links plus shared references. Plain validation
+checks every target without reading content or emitting a success row per link.
+The regular regression suite also removes the final target and asserts failure
+after the historical 256-target and detailed-output cutoffs.
+
+```powershell
+$env:ARCHIE_TEST_SCRATCH = 'C:\artifacts\measurement'
+$env:ARCHIE_MEASURE_VALIDATION = '1'
+go test -count=1 -run '^TestValidationProcessMeasurement$' -v ./internal/cli
+go test -run '^$' -bench '^BenchmarkValidateReferences493$' -benchmem -benchtime=3x ./internal/query
+```
+
+The native harness records one first invocation and ten subsequent fresh
+processes; p50/p95 use nearest rank. Fixture setup, binary build and JSON
+validation are outside process timing. Fixture creation warms the filesystem;
+there is no cache eviction. The in-process benchmark includes graph loading and
+response generation and reports cumulative allocation, **not peak resident
+memory**. Both require complete 493-target coverage, not merely successful
+process startup or ID enumeration.
+
+Observed on Windows amd64, Go 1.26.1, Intel Core i9-13900K: native first invocation
+1,208 ms; subsequent min/p50/p95/max 1,163/1,202/2,026/2,026 ms; stdout 514 bytes.
+The three-iteration in-process benchmark measured 1,362 ms/op and 11,270,032
+allocated bytes/op. Before invocation-local directory-listing reuse, the same
+in-process fixture allocated 57,606,336 bytes/op. Listings remain bounded to
+20,000 entries and are never reused across invocations or observed directory
+changes. These are local observations under a shared-machine workload, not
+latency thresholds, peak-memory bounds or a comparison with a real application's
+different directory structure.

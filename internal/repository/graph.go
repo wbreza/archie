@@ -46,11 +46,24 @@ var pruned = map[string]bool{
 // Load never publishes a graph if enumeration or identity is uncertain.
 // Local schema errors with a provably unique ID are retained as explicit gaps.
 func Load(root string) (*Graph, *Problem) {
+	return loadRoot(root, false)
+}
+
+// LoadForValidation defers file-reference inspection to the exhaustive validator.
+// Scoped queries still require the loader's global reference safety checks.
+func LoadForValidation(root string) (*Graph, *Problem) {
+	return loadRoot(root, true)
+}
+
+func loadRoot(root string, validation bool) (*Graph, *Problem) {
 	fs, e := Open(root)
 	if e != nil {
 		return nil, e
 	}
-	g, e := load(fs)
+	if validation {
+		fs.listings = map[string][]os.DirEntry{}
+	}
+	g, e := load(fs, validation)
 	if e != nil {
 		fs.Close()
 		return nil, e
@@ -58,7 +71,7 @@ func Load(root string) (*Graph, *Problem) {
 	return g, nil
 }
 
-func load(fs *Filesystem) (*Graph, *Problem) {
+func load(fs *Filesystem, validation bool) (*Graph, *Problem) {
 	info, e := fs.Inspect("archie.yaml")
 	if e != nil {
 		return nil, e
@@ -199,7 +212,7 @@ func load(fs *Filesystem) (*Graph, *Problem) {
 			}
 			allNodes = append(allNodes, n)
 			if parseErr != nil {
-				g.invalidate(p, parseErr.Code)
+				g.invalidate(p, parseErr.Code, parseErr.Message)
 				continue
 			}
 			g.Nodes[id] = n
@@ -212,13 +225,15 @@ func load(fs *Filesystem) (*Graph, *Problem) {
 	}
 	sort.Slice(g.Ordered, func(i, j int) bool { return g.Ordered[i].Descriptor < g.Ordered[j].Descriptor })
 	sort.Slice(g.Boundaries, func(i, j int) bool { return g.Boundaries[i].Path < g.Boundaries[j].Path })
-	for _, n := range allNodes {
-		for _, ref := range n.References {
-			if boundary := g.Excluded(ref.Target); boundary != "" && boundary != "symlink" {
-				continue
-			}
-			if _, e := fs.Inspect(ref.Target); e != nil {
-				return nil, e
+	if !validation {
+		for _, n := range allNodes {
+			for _, ref := range n.References {
+				if boundary := g.Excluded(ref.Target); boundary != "" && boundary != "symlink" {
+					continue
+				}
+				if _, e := fs.Inspect(ref.Target); e != nil {
+					return nil, e
+				}
 			}
 		}
 	}
@@ -231,10 +246,7 @@ func load(fs *Filesystem) (*Graph, *Problem) {
 			}
 			for _, target := range n.Outgoing {
 				if g.Nodes[target] == nil {
-					if n.Descriptor == "archie.yaml" {
-						return nil, problem("LINK_UNRESOLVED", "Root contains an unresolved record link.")
-					}
-					g.invalidate(n.Descriptor, "LINK_UNRESOLVED")
+					g.invalidate(n.Descriptor, "LINK_UNRESOLVED", "Record contains an unresolved link to "+target+".")
 					delete(g.Nodes, n.Record.ID)
 					removed = true
 					break
@@ -294,6 +306,13 @@ func load(fs *Filesystem) (*Graph, *Problem) {
 	}
 	g.Metadata.Loaded, g.Metadata.Invalid = len(valid), len(g.Invalid)
 	g.Metadata.Excluded, g.Metadata.Complete = len(g.Boundaries), true
+	if g.Nodes[root.ID] == nil {
+		if e := fs.Verify(); e != nil {
+			return nil, e
+		}
+		return nil, &Problem{Code: "LINK_UNRESOLVED", Message: "Root contains an unresolved record link.",
+			Descriptor: "archie.yaml", Diagnostics: g.Diagnostics, Metadata: g.Metadata}
+	}
 	keys := make([]string, 0, len(raws))
 	for p := range raws {
 		keys = append(keys, p)
@@ -317,9 +336,9 @@ func load(fs *Filesystem) (*Graph, *Problem) {
 	return g, nil
 }
 
-func (g *Graph) invalidate(p, code string) {
+func (g *Graph) invalidate(p, code, message string) {
 	g.Invalid = append(g.Invalid, p)
-	g.Diagnostics = append(g.Diagnostics, contract.Diagnostic{Code: code, Message: "Invalid descriptor omitted from scoped results.", Descriptor: p})
+	g.Diagnostics = append(g.Diagnostics, contract.Diagnostic{Code: code, Message: message, Descriptor: p})
 }
 
 func (g *Graph) Excluded(p string) string {

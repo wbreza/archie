@@ -33,6 +33,7 @@ type Diagnostic struct {
 	Code       string `json:"code"`
 	Message    string `json:"message"`
 	Descriptor string `json:"descriptor,omitempty"`
+	Target     string `json:"target,omitempty"`
 }
 
 type MetadataCoverage struct {
@@ -55,6 +56,17 @@ type EvidenceCoverage struct {
 	Unchecked int `json:"unchecked"`
 }
 
+// ReferenceCoverage counts mandatory validation inspections, not content reads
+// or baseline comparisons. Complete inspections can still find invalid targets.
+type ReferenceCoverage struct {
+	Total     int  `json:"total"`
+	Checked   int  `json:"checked"`
+	Unchecked int  `json:"unchecked"`
+	Missing   int  `json:"missing"`
+	Invalid   int  `json:"invalid"`
+	Complete  bool `json:"complete"`
+}
+
 type Omission struct {
 	Reason string   `json:"reason"`
 	Count  int      `json:"count"`
@@ -62,11 +74,12 @@ type Omission struct {
 }
 
 type Coverage struct {
-	Metadata         MetadataCoverage  `json:"metadata"`
-	Selection        SelectionCoverage `json:"selection"`
-	Evidence         EvidenceCoverage  `json:"evidence"`
-	Omissions        []Omission        `json:"omissions"`
-	DiagnosticCounts map[string]int    `json:"diagnostic_counts,omitempty"`
+	Metadata         MetadataCoverage   `json:"metadata"`
+	Selection        SelectionCoverage  `json:"selection"`
+	Evidence         EvidenceCoverage   `json:"evidence"`
+	Omissions        []Omission         `json:"omissions"`
+	DiagnosticCounts map[string]int     `json:"diagnostic_counts,omitempty"`
+	References       *ReferenceCoverage `json:"references,omitempty"`
 }
 
 type Continuation struct {

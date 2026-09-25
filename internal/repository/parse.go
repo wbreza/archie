@@ -3,7 +3,9 @@ package repository
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
+	"path"
 	"regexp"
 	"strings"
 	"sync"
@@ -17,6 +19,8 @@ import (
 
 type Problem struct {
 	Code, Message, Descriptor string
+	Diagnostics               []contract.Diagnostic
+	Metadata                  contract.MetadataCoverage
 }
 
 func (p *Problem) Error() string { return p.Code + ": " + p.Message }
@@ -78,9 +82,40 @@ func Parse(raw []byte, root bool) (record contract.RootRecord, identity string, 
 		return record, identity, problem("INTERNAL", "Bundled schema could not be compiled.")
 	}
 	if e := s.Validate(value); e != nil {
-		return record, identity, problem("SCHEMA_INVALID", "Record does not conform to the bundled v1 schema.")
+		message := "Record does not conform to the bundled v1 schema."
+		if validation, ok := e.(*jsonschema.ValidationError); ok {
+			validation = firstSchemaCause(validation)
+			keyword := path.Base(validation.KeywordLocation)
+			message = fmt.Sprintf("Schema violation at %s (%s).", validation.InstanceLocation, keyword)
+			// Length messages contain numeric limits, never authored values.
+			if keyword == "maxLength" || keyword == "minLength" {
+				message = fmt.Sprintf("Schema violation at %s: %s.", validation.InstanceLocation, validation.Message)
+			}
+			runes := []rune(message)
+			if len(runes) > 256 {
+				message = string(runes[:253]) + "..."
+			}
+		}
+		return record, identity, problem("SCHEMA_INVALID", message)
 	}
 	return record, identity, nil
+}
+
+// Schema property errors can originate from map iteration. Choose the same leaf
+// regardless of the validator's traversal order.
+func firstSchemaCause(e *jsonschema.ValidationError) *jsonschema.ValidationError {
+	if len(e.Causes) == 0 {
+		return e
+	}
+	var first *jsonschema.ValidationError
+	for _, cause := range e.Causes {
+		leaf := firstSchemaCause(cause)
+		if first == nil || leaf.InstanceLocation < first.InstanceLocation ||
+			leaf.InstanceLocation == first.InstanceLocation && leaf.KeywordLocation < first.KeywordLocation {
+			first = leaf
+		}
+	}
+	return first
 }
 
 func checkNode(n *yaml.Node, depth int, count *int) *Problem {
