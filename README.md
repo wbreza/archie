@@ -1,62 +1,102 @@
-# archie
-Repository-native architectural knowledge for coding agents.
+# Archie
 
-Archie v1 is a local Go CLI: strict metadata loading, bounded context/navigation,
-known impact, validation, explicit Git evidence comparison and non-overwriting
-descriptor scaffolding. Read commands have no persistent cache and do not mutate files.
+**An architectural map of your codebase, kept with your code.**
 
-- [Public v1 contract](docs/contract-v1.md): commands, JSON, safety and budgets.
-- [Authored record schema](schemas/record.schema.json)
-- [Root discovery extension](schemas/root.schema.json)
-- [Response schema](schemas/response.schema.json)
-- [Local packaging and representative measurement](docs/build-and-measure.md)
-- [Go version policy, private installs and manual releases](docs/versioning.md)
+Archie helps developers and coding agents understand how a project fits
+together before changing it. You describe the important parts of your system in
+small YAML files alongside the source: what each part owns, how it relates to
+other parts, and where to find the code, tests, documentation, and decisions
+behind it. Archie's local command-line tool turns those records into focused,
+machine-readable context.
 
-The first Go release is **`v0.1.0` (pending publication)**, separate from the
-API/schema generation `"1"`. After publication, install the pinned package
-`github.com/wbreza/archie/cmd/archie@v0.1.0` using the private-access setup above.
+Instead of rediscovering the same boundaries on every task, your team can keep
+that knowledge in version control and review it with the code it describes.
 
-Requires Go 1.25 or later (rooted filesystem containment). Build and run:
+## Why use Archie?
 
-```powershell
-go build -o archie.exe ./cmd/archie
-.\archie.exe version
-.\archie.exe context --root C:\path\to\application --query "report delivery"
-.\archie.exe get --root C:\path\to\application --id renderer
-.\archie.exe impact --root C:\path\to\application --path src/render.go
-.\archie.exe validate --root C:\path\to\application
-.\archie.exe scaffold --root C:\path\to\application --file archie.yaml --id app --name "Application" --summary "Owns application boundaries."
-```
+Code search helps you find a symbol. Archie helps you find the **architectural
+context around the work**:
 
-Queries emit bounded JSON. Exit 4 means an explicitly partial result; exit 1
-invalid metadata, 2 usage/cursor errors, and 3 operational failure. Missing
-matches never imply missing implementation. Without an explicit full commit
-`--baseline`, existing evidence is `unknown`, not verified unchanged.
-Scaffold requires an existing root/parent directory, validates generated YAML and
-creates exactly one new file. Use `rendering.archie.yaml` for a named sibling;
-non-root scaffolds require valid existing metadata and an unused ID.
+- **Get oriented in an unfamiliar project.** Find the components associated
+  with a topic and understand their responsibilities and relationships.
+- **Give coding agents a starting point.** Retrieve a bounded context packet
+  with pointers to relevant source, tests, and architectural decisions.
+- **Understand known impact before a change.** Find documented components
+  associated with a file or directory you plan to edit.
+- **Keep the map connected to the code.** Validate records and their file
+  references, and optionally compare linked files with an explicit Git commit.
 
-Plain `validate` checks schemas, record links and **every distinct referenced
-file's existence and path/identity safety**, within explicit work limits.
-It returns compact counts in `coverage.references` and bounded, actionable
-diagnostics. Missing/unsafe references fail; excluded or unvisited references
-cannot report complete success. File contents are not read for these checks:
-existence/safety is not complete readability or semantic freshness.
-`--evidence` still requests optional bounded evidence detail/comparison.
-See the [validation contract](docs/contract-v1.md#complete-reference-validation)
-for limits, compatibility and the success conditions a future preflight consumer
-must require.
+For example, a task about report delivery might lead you to records for a
+renderer and a mailer, explain which owns formatting versus sending, and point
+you to their tests and design decisions.
 
-Archie's own architecture starts at [archie.yaml](archie.yaml), with sparse
-component records beside the implementation. With `archie` on PATH, from this
-repository root:
+## How it works
+
+1. **Describe your system.** Add a root `archie.yaml`, then records near
+   meaningful components using `archie.yaml` or a name such as
+   `rendering.archie.yaml`. Start with useful boundaries, not every file.
+2. **Ask for context.** Query by topic, record ID, or path. Archie reads the
+   records, follows documented relationships, and returns JSON within explicit
+   output limits.
+3. **Maintain the map as the code evolves.** Update descriptions and links
+   alongside implementation changes, and validate them before handing work off.
+
+Archie runs locally. Read commands do not modify your project or create
+persistent indexes or caches. The records are descriptive data, not executable
+instructions. The CLI is language-independent: it works with the architecture
+you describe, rather than requiring a parser for your application's language.
+
+## Quickstart
+
+Download the archive for your platform from
+[the releases page](https://github.com/wbreza/archie/releases/latest), extract
+it, and put the executable on your `PATH`. No Go installation is needed to run
+a release binary.
+
+Alternatively, with **Go 1.25+** and Git installed:
 
 ```sh
-archie context --root . --query "architecture of Archie CLI and bounded query/evidence pipeline" --max-records 5 --max-bytes 32768
-archie get --root . --id query
-archie discover --root .
+go install github.com/wbreza/archie/cmd/archie@v0.2.0
+archie version
 ```
 
-Run `go test ./...` and `go vet ./...`. Tests use `ARCHIE_TEST_SCRATCH` when set
-for their isolated fixtures; otherwise they create and remove fixture directories
-beneath each test package, never the system temporary directory.
+Go's binary directory must be on your `PATH`. See
+[installation and setup](docs/getting-started.md) for platform details.
+
+In an **existing demo directory without an `archie.yaml`**, run:
+
+```sh
+archie scaffold --root . --file archie.yaml --id reports --name "Report service" --summary "Generates and delivers customer reports."
+archie context --root . --query "customer reports"
+archie validate --root .
+```
+
+The first command creates a minimal architecture record. The second returns a
+JSON context packet containing that record. The third checks the metadata and
+any referenced files; this minimal example does not have file links yet.
+
+Next, [add a component and links to its code](docs/usage.md#describe-a-component)
+to make the map useful for real work. If your repository already has Archie
+records, skip scaffolding and query them instead.
+
+## What Archie does not do
+
+Archie does not automatically infer your architecture or replace reading source
+code. Its topic matching searches authored metadata, not the meaning of every
+file. Records need to be written and maintained by people or agents that have
+examined the implementation.
+
+Known impact is not exhaustive dependency analysis, and successful validation
+does not prove a description is still true. Results make limits and uncertainty
+explicit so an agent or developer can decide what to inspect next.
+
+## Learn more
+
+| I want to... | Start here |
+| --- | --- |
+| Install Archie and create my first record | [Getting started](docs/getting-started.md) |
+| Describe components, query context, or check a change | [Usage guide](docs/usage.md) |
+| Contribute or explore Archie's implementation | [Contributing](CONTRIBUTING.md) |
+| Integrate the CLI with tools or coding agents | [CLI and JSON contract](docs/contract-v1.md) |
+| Build archives or understand measurement results | [Build and measurement](docs/build-and-measure.md) |
+| Understand version compatibility and releases | [Versioning](docs/versioning.md) |

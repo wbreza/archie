@@ -7,6 +7,8 @@ import (
 	"compress/gzip"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -16,7 +18,11 @@ type brokenWriter struct{}
 func (brokenWriter) Write([]byte) (int, error) { return 0, errors.New("broken output") }
 
 func TestArchiveContentAndDeterminism(t *testing.T) {
-	entries := []entry{{"archie", []byte("binary"), 0o755}, {"docs/contract.md", []byte("contract"), 0o644}}
+	docs, err := loadDocumentation(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries := append([]entry{{"archie", []byte("binary"), 0o755}}, docs...)
 	for _, windows := range []bool{true, false} {
 		var first, second bytes.Buffer
 		if err := archive(&first, windows, entries); err != nil {
@@ -40,7 +46,7 @@ func TestArchiveContentAndDeterminism(t *testing.T) {
 				}
 				b, err := io.ReadAll(r)
 				r.Close()
-				if err != nil || file.Name != entries[i].name || !bytes.Equal(b, entries[i].data) || file.Mode().Perm() != 0o755 && i == 0 {
+				if err != nil || file.Name != entries[i].name || !bytes.Equal(b, entries[i].data) || int64(file.Mode().Perm()) != entries[i].mode {
 					t.Fatalf("wrong zip member: %+v %v", file, err)
 				}
 			}
@@ -68,6 +74,35 @@ func TestArchiveContentAndDeterminism(t *testing.T) {
 		if err := archive(brokenWriter{}, windows, entries); err == nil {
 			t.Fatal("archive writer error ignored")
 		}
+	}
+}
+
+func TestBundledDocumentation(t *testing.T) {
+	root := filepath.Join("..", "..")
+	docs, err := loadDocumentation(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"README.md", "CONTRIBUTING.md",
+		"docs/getting-started.md", "docs/usage.md",
+		"docs/contract-v1.md", "docs/build-and-measure.md", "docs/versioning.md",
+		"schemas/record.schema.json", "schemas/root.schema.json", "schemas/response.schema.json",
+	}
+	if len(docs) != len(want) {
+		t.Fatalf("got %d bundled documents, want %d", len(docs), len(want))
+	}
+	for i, name := range want {
+		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if docs[i].name != name || !bytes.Equal(docs[i].data, data) || docs[i].mode != 0o644 {
+			t.Fatalf("wrong bundled document %q", name)
+		}
+	}
+	if _, err := loadDocumentation(filepath.Join(root, "README.md")); err == nil {
+		t.Fatal("missing documentation must fail")
 	}
 }
 

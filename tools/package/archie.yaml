@@ -8,8 +8,9 @@ description: |
   Packaging is a separate Go command run from the repository root, not part of
   the read-query runtime. It cross-compiles the CLI with CGO disabled for Windows,
   Linux and macOS on amd64 and arm64, injecting the requested build version.
-  Each archive contains the binary, README, public/build documentation and the
-  three JSON schemas. Windows archives are ZIP; Unix archives are tar.gz.
+  Each archive contains the binary, README, user and contributor guides,
+  public/build documentation and the three JSON schemas. Windows archives are
+  ZIP; Unix archives are tar.gz.
 
   The caller supplies an existing output parent; a new version directory and
   archive files are created without replacing existing output. SHA256SUMS covers
@@ -30,7 +31,7 @@ links:
     description: Cross-compilation, exclusive versioned output, archive assembly and checksums.
   - relation: test
     target: main_test.go
-    description: Archive content/determinism checks and build input/environment validation.
+    description: Bundled documentation, archive content/determinism and build input/environment checks.
   - relation: doc
     target: ../../docs/build-and-measure.md
     description: Local packaging procedure and limits on reproducibility, native acceptance and measurement claims.

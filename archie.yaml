@@ -33,7 +33,16 @@ links:
     description: Public command, discovery, containment, budget and evidence semantics.
   - relation: doc
     target: docs/versioning.md
-    description: Go module version policy, private installation and manually approved immutable tags.
+    description: Go module version policy, build provenance and manually approved immutable tags.
   - relation: doc
     target: README.md
-    description: Developer entry point for building, running and navigating Archie itself.
+    description: User-facing overview, first-use quickstart and navigation to detailed guides.
+  - relation: doc
+    target: docs/getting-started.md
+    description: Public release installation, first architecture record and initial queries.
+  - relation: doc
+    target: docs/usage.md
+    description: Record authoring, context queries, known impact and validation workflows.
+  - relation: doc
+    target: CONTRIBUTING.md
+    description: Contributor setup, architecture navigation and change verification.

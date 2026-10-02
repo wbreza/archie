@@ -54,13 +54,9 @@ func build(version, parent string) error {
 	if err != nil || !info.IsDir() {
 		return fmt.Errorf("output parent must already exist")
 	}
-	var docs []entry
-	for _, name := range []string{"README.md", "docs/contract-v1.md", "docs/build-and-measure.md", "docs/versioning.md", "schemas/record.schema.json", "schemas/root.schema.json", "schemas/response.schema.json"} {
-		b, err := os.ReadFile(filepath.FromSlash(name))
-		if err != nil {
-			return fmt.Errorf("run from the Archie repository root: %w", err)
-		}
-		docs = append(docs, entry{name, b, 0o644})
+	docs, err := loadDocumentation(".")
+	if err != nil {
+		return err
 	}
 	out := filepath.Join(parent, "archie_"+version)
 	if err := os.Mkdir(out, 0o755); err != nil {
@@ -119,6 +115,23 @@ func build(version, parent string) error {
 		return err
 	}
 	return closeErr
+}
+
+func loadDocumentation(root string) ([]entry, error) {
+	var docs []entry
+	for _, name := range []string{
+		"README.md", "CONTRIBUTING.md",
+		"docs/getting-started.md", "docs/usage.md",
+		"docs/contract-v1.md", "docs/build-and-measure.md", "docs/versioning.md",
+		"schemas/record.schema.json", "schemas/root.schema.json", "schemas/response.schema.json",
+	} {
+		b, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
+		if err != nil {
+			return nil, fmt.Errorf("run from the Archie repository root: %w", err)
+		}
+		docs = append(docs, entry{name, b, 0o644})
+	}
+	return docs, nil
 }
 
 func buildEnv(platform target) []string {
