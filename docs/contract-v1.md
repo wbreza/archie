@@ -1,5 +1,7 @@
 # Archie v1 public contract
 
+[Overview](../README.md) | [Getting started](getting-started.md) | [Usage guide](usage.md)
+
 This is the shared contract for the W2–W4 runtime and W5 consumers. The runtime
 supports read commands, explicit scaffolding, local packaging and measurements.
 The approved scope is local, deterministic, read-only and free of persistent caches, except
@@ -137,9 +139,10 @@ Validation may reuse directory listings within its invocation, bounded to
 `version` returns `data:{"version":"<build version>"}`: a nonempty linker
 override, otherwise the installed Go module version verbatim, otherwise
 `0.1.0-dev` for local source builds. Schema/API version remains `"1"`.
-See [versioning](versioning.md) for precedence and immutable Go tags (first
-`v0.1.0` pending publication), and [build and measurement](build-and-measure.md)
-for linker injection and local Windows/Linux/macOS archives (no publication).
+See [versioning](versioning.md) for precedence and immutable Go tags, and
+[build and measurement](build-and-measure.md) for linker injection and local
+Windows/Linux/macOS archive creation (the packager does not publish).
+The CLI release version is separate from API/schema generation `"1"`.
 
 ## Deterministic selection, budgets and continuation (W3 obligations)
 

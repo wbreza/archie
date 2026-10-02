@@ -1,17 +1,22 @@
 # Go versions and manual releases
 
-**First release: `v0.1.0`, pending publication.** The commands below describe the
-approved policy, not an already available remote tag. Do not advertise a working
-tagged install until the exact merged release commit has been approved, tagged
-and verified. No GitHub Release, release assets, registry or publishing workflow
-is required: Go installs directly from the immutable Git tag.
+[Overview](../README.md) | [Getting started](getting-started.md) | [Contributing](../CONTRIBUTING.md)
+
+**Published release: [v0.2.0](https://github.com/wbreza/archie/releases/tag/v0.2.0).**
+The repository is public and the release includes prebuilt archives. For normal
+installation, follow [getting started](getting-started.md); no private GitHub
+credentials are required. Go can also install directly from the immutable tag.
+
+This page covers version semantics and maintainer procedures, not a prerequisite
+for using Archie. Do not advertise a future tagged install until its exact
+merged release commit has been approved, tagged, and verified.
 
 ## Version policy
 
 - This repository has one root Go module, `github.com/wbreza/archie`. Tags are
   root-level **`vMAJOR.MINOR.PATCH`**, including the required `v` prefix; not
   `cmd/archie/v0.1.0` or `0.1.0`.
-- Start at **`v0.1.0`**, not `v1.0.0`: the existing “Archie v1” contract names
+- CLI releases are still **pre-1.0**: the existing “Archie v1” contract names
   API/schema generation `"1"`, not a promise of Go module v1 stability.
 - Increment patch for backward-compatible fixes. Increment minor for features;
   before v1, breaking changes also require a minor increment and explicit
@@ -37,22 +42,25 @@ There is no runtime Git/network lookup. A local checkout at a tag is still a
 development build unless explicitly stamped; HEAD alone is not a release.
 An explicit `0.1.0-dev` override still wins over installed-module metadata.
 The local [packager](build-and-measure.md) retains its existing unprefixed
-`-version 0.1.0` input and injects that value; this is separate from Go's required
-`v0.1.0` tag spelling. Use `go version -m` to inspect provenance independently.
+`-version 0.2.0` input and injects that value; this is separate from Go's required
+`v0.2.0` tag spelling. Use `go version -m` to inspect provenance independently.
 
 ## Private tagged install and verification (PowerShell 7)
 
-Requires Go 1.25+, Git and a GitHub account with repository read access.
-`wbreza/archie` is currently private. Before downloading, authorize the account,
-tag and destination; an install may replace a binary already in that directory.
+**Conditional reference only:** this procedure is for an authorized private
+deployment of the module, not the current public repository's normal install.
+It requires Go 1.25+, Git, GitHub CLI, and an authenticated GitHub account with
+repository read access. Adapt the repository and module paths if using a fork.
+Before downloading, authorize the account, tag, and destination; an install may
+replace a binary already in that directory.
 Choose a separate directory if the existing binary must remain untouched.
 No OAuth `workflow` scope is needed for an install. Never switch the global
 `gh` account, put a token in a URL/command argument/file, or persist Go settings.
 
-After `v0.1.0` is published, the supported package is:
+The current public pinned package is:
 
 ```text
-go install github.com/wbreza/archie/cmd/archie@v0.1.0
+go install github.com/wbreza/archie/cmd/archie@v0.2.0
 ```
 
 For private access, run it in the protected process below, not via the default
@@ -62,8 +70,8 @@ Credential helper changes and the selected stored token are process-only.
 
 ```powershell
 $account = 'wbreza' # Explicitly authorized, already authenticated account.
-$tag = 'v0.1.0'     # Pending publication; do not run until verified available.
-$installDir = 'C:\tools\archie-v0.1.0' # Approved absolute destination.
+$tag = 'v0.2.0' # Verify availability in the target repository.
+$installDir = 'C:\tools\archie-v0.2.0' # Approved absolute destination.
 $archie = Join-Path $installDir 'archie.exe'
 $count = if ($env:GIT_CONFIG_COUNT) { [int]$env:GIT_CONFIG_COUNT } else { 0 }
 $names = @('GH_TOKEN','GOBIN','GOPRIVATE','GONOPROXY','GONOSUMDB',
@@ -110,7 +118,7 @@ try {
 ```
 
 Require module lookup/build information to identify `github.com/wbreza/archie`
-at exactly `v0.1.0`, and the executable to return `data.version: "v0.1.0"` with
+at exactly `v0.2.0`, and the executable to return `data.version: "v0.2.0"` with
 `api_version: "1"`. A pseudo-version is useful commit provenance, **not proof of
 the release tag**. Keep invoking the inspected absolute binary path; do not
 overwrite another install or persist PATH changes automatically.
@@ -126,8 +134,9 @@ tag. Resolve any failed check before continuing; do not replace a tag.
 
 ```powershell
 $account = 'wbreza'
-$tag = 'v0.1.0'
+$tag = '<approved new vMAJOR.MINOR.PATCH tag>'
 $sha = '<approved full merged main commit SHA>'
+if ($tag -notmatch '^v\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') { throw 'Supply the approved new release tag.' }
 if ($sha -notmatch '^[0-9a-f]{40}$') { throw 'Supply the approved full commit SHA.' }
 $savedToken = $env:GH_TOKEN
 try {
@@ -165,10 +174,11 @@ try {
 }
 ```
 
-The peeled `refs/tags/v0.1.0^{}` commit must equal the approved SHA. Annotation
+The peeled `refs/tags/<approved-tag>^{}` commit must equal the approved SHA. Annotation
 is required; signing may use an already configured key but is not a new
 prerequisite. Never delete even a local release tag to conceal a failed publish.
-Then perform the private `go list -m`, isolated `go install`, `go version -m` and
-`archie version` checks above. Only after those pass, update install guidance to
+Then perform `go list -m`, an isolated tagged `go install`, `go version -m`, and
+`archie version` checks for that exact new tag. Use process-only private access
+only if the target repository requires it. Only after those pass, update install guidance to
 mark the tag available. Tag availability and a remote tagged install cannot be
 proved by local fixture tests or a source build.

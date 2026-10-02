@@ -1,5 +1,11 @@
 # Local builds, packaging and measurement
 
+[Overview](../README.md) | [Getting started](getting-started.md) | [Contributing](../CONTRIBUTING.md)
+
+For published binaries or a pinned Go install, use
+[getting started](getting-started.md). This page is for contributors building
+from source, creating local archives, or running opt-in measurements.
+
 Go 1.25+ is required. Use standard Go commands from the repository root:
 
 ```powershell
@@ -13,8 +19,8 @@ Local source builds without an override report `0.1.0-dev`. A versioned
 `go install` instead reports Go's embedded module version, including its `v`
 prefix; an explicit linker override always wins. `api_version` and authored
 `schema_version` remain `"1"` independently of the build version. See
-[Go versions and manual releases](versioning.md) for precedence, private-module
-access and the first `v0.1.0` tag (**pending publication**).
+[Go versions and manual releases](versioning.md) for precedence, release
+compatibility, conditional private-module access, and immutable tags.
 
 ## Packaging (no release or publication)
 
@@ -26,8 +32,10 @@ go run ./tools/package -version 0.1.0-dev -out C:\artifacts
 This creates a new `archie_0.1.0-dev` directory, refusing existing output. It
 cross-compiles CGO-free binaries for Windows, Linux and macOS, each for amd64 and
 arm64. Windows uses ZIP; Unix uses tar.gz with executable permissions. Each
-archive contains the binary, README, contract/build/versioning documentation and three
-schemas. `SHA256SUMS` covers the archives. Only a uniquely created `.build-*`
+archive contains the binary, README, CONTRIBUTING, getting-started and usage
+guides, contract/build/versioning documentation, and three schemas. Linked
+source files remain online in the repository. `SHA256SUMS` covers the archives.
+Only a uniquely created `.build-*`
 child is removed; interrupted/failed output is retained for inspection.
 
 No registry tool, credentials, signing, release creation, upload or publication
